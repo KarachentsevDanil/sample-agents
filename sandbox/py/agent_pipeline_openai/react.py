@@ -15,8 +15,10 @@ from bitgn.vm.mini_pb2 import (
     WriteRequest,
 )
 
+from agent_pipeline.prompts import build_initial_user_message
+
 from .models import AgentRuntimeContext, PipelineContext, ReportTaskCompletion
-from .prompts import SYSTEM_PROMPT, build_initial_user_message
+from .prompt_manager import PromptManager
 
 MAX_STEPS = 30
 
@@ -46,28 +48,25 @@ def _ensure_sdk() -> None:
         ) from _IMPORT_ERROR
 
 
-def _tool_result(ctx: AgentRuntimeContext, command: str, args: dict, result_summary: str) -> str:
+def _tool_result(ctx: AgentRuntimeContext, command: str, args: dict, result_text: str) -> str:
     ctx.step_idx += 1
-    api_record = {
+    ctx.logger.append_api_call({
         "step": ctx.step_idx,
         "cmd": command,
         "args": args,
-        "result": result_summary,
+        "result": result_text,
         "ts": time.time(),
-    }
-    ctx.logger.append_api_call(api_record)
-
+    })
     step_record = {
         "step": ctx.step_idx,
-        "current_state": args.get("reason", ""),
-        "plan": [args.get("reason", "") or f"Run {command}"],
-        "function": command,
-        "result_summary": result_summary[:400],
+        "cmd": command,
+        "args": args,
+        "result": result_text[:400],
         "ts": time.time(),
     }
     ctx.pipeline.react_trace.append(step_record)
     ctx.logger.append_react_step(step_record)
-    return result_summary
+    return result_text
 
 
 def _tool_error(ctx: AgentRuntimeContext, command: str, args: dict, err: ConnectError) -> str:
@@ -83,10 +82,9 @@ def _tool_error(ctx: AgentRuntimeContext, command: str, args: dict, err: Connect
     })
     step_record = {
         "step": ctx.step_idx,
-        "current_state": args.get("reason", ""),
-        "plan": [args.get("reason", "") or f"Run {command}"],
-        "function": command,
-        "result_summary": message[:400],
+        "cmd": command,
+        "args": args,
+        "result": message[:400],
         "ts": time.time(),
     }
     ctx.pipeline.react_trace.append(step_record)
@@ -95,14 +93,14 @@ def _tool_error(ctx: AgentRuntimeContext, command: str, args: dict, err: Connect
 
 
 def _record_file_use(ctx: AgentRuntimeContext, path: str) -> None:
-    if path not in ctx.pipeline.files_used:
+    if path and path not in ctx.pipeline.files_used:
         ctx.pipeline.files_used.append(path)
 
 
 if function_tool is not None:
     @function_tool
-    def tree(wrapper: RunContextWrapper[AgentRuntimeContext], path: str, reason: str = "") -> str:
-        req_args = {"path": path, "reason": reason}
+    def tree(wrapper: RunContextWrapper[AgentRuntimeContext], path: str) -> str:
+        req_args = {"path": path}
         try:
             resp = wrapper.context.vm.outline(OutlineRequest(path=path))
             text = json.dumps(MessageToDict(resp), indent=2)
@@ -114,9 +112,8 @@ if function_tool is not None:
 
 
     @function_tool
-    def search(wrapper: RunContextWrapper[AgentRuntimeContext], pattern: str, path: str = "/", count: int = 5,
-               reason: str = "") -> str:
-        req_args = {"pattern": pattern, "path": path, "count": count, "reason": reason}
+    def search(wrapper: RunContextWrapper[AgentRuntimeContext], pattern: str, path: str = "/", count: int = 5) -> str:
+        req_args = {"pattern": pattern, "path": path, "count": count}
         try:
             resp = wrapper.context.vm.search(SearchRequest(path=path, pattern=pattern, count=count))
             text = json.dumps(MessageToDict(resp), indent=2)
@@ -128,8 +125,8 @@ if function_tool is not None:
 
 
     @function_tool
-    def list(wrapper: RunContextWrapper[AgentRuntimeContext], path: str, reason: str = "") -> str:
-        req_args = {"path": path, "reason": reason}
+    def list(wrapper: RunContextWrapper[AgentRuntimeContext], path: str) -> str:
+        req_args = {"path": path}
         try:
             resp = wrapper.context.vm.list(ListRequest(path=path))
             text = json.dumps(MessageToDict(resp), indent=2)
@@ -141,8 +138,8 @@ if function_tool is not None:
 
 
     @function_tool
-    def read(wrapper: RunContextWrapper[AgentRuntimeContext], path: str, reason: str = "") -> str:
-        req_args = {"path": path, "reason": reason}
+    def read(wrapper: RunContextWrapper[AgentRuntimeContext], path: str) -> str:
+        req_args = {"path": path}
         try:
             resp = wrapper.context.vm.read(ReadRequest(path=path))
             text = resp.content
@@ -155,10 +152,10 @@ if function_tool is not None:
 
 
     @function_tool
-    def write(wrapper: RunContextWrapper[AgentRuntimeContext], path: str, content: str, reason: str = "") -> str:
-        req_args = {"path": path, "content": content, "reason": reason}
+    def write(wrapper: RunContextWrapper[AgentRuntimeContext], path: str, content: str) -> str:
+        req_args = {"path": path, "content": content}
         try:
-            resp = wrapper.context.vm.write(WriteRequest(path=path, content=content))
+            resp = wrapper.context.vm.write(WriteRequest(path=path, content=content.rstrip("\n")))
             text = json.dumps(MessageToDict(resp), indent=2)
             _record_file_use(wrapper.context, path)
             print(f"{CLI_GREEN}OUT{CLI_CLR}: {text}")
@@ -169,12 +166,11 @@ if function_tool is not None:
 
 
     @function_tool
-    def delete(wrapper: RunContextWrapper[AgentRuntimeContext], path: str, reason: str = "") -> str:
-        req_args = {"path": path, "reason": reason}
+    def delete(wrapper: RunContextWrapper[AgentRuntimeContext], path: str) -> str:
+        req_args = {"path": path}
         try:
             resp = wrapper.context.vm.delete(DeleteRequest(path=path))
             text = json.dumps(MessageToDict(resp), indent=2)
-            _record_file_use(wrapper.context, path)
             print(f"{CLI_GREEN}OUT{CLI_CLR}: {text}")
             return _tool_result(wrapper.context, "delete", req_args, text)
         except ConnectError as err:
@@ -189,22 +185,22 @@ if function_tool is not None:
         code: str,
         completed_steps_laconic: List[str],
         grounding_refs: List[str] | None = None,
-        reason: str = "",
     ) -> ReportTaskCompletion:
         grounding_refs = grounding_refs or []
+        grounding_refs = [ref.lstrip("/") for ref in grounding_refs if isinstance(ref, str)]
         req_args = {
+            "tool": "report_completion",
             "answer": answer,
             "code": code,
             "completed_steps_laconic": completed_steps_laconic,
             "grounding_refs": grounding_refs,
-            "reason": reason,
         }
         completion = ReportTaskCompletion(
+            tool="report_completion",
             completed_steps_laconic=completed_steps_laconic,
             answer=answer,
             grounding_refs=grounding_refs,
             code=code,
-            reason=reason,
         )
         try:
             wrapper.context.vm.answer(AnswerRequest(answer=answer, refs=grounding_refs))
@@ -212,9 +208,8 @@ if function_tool is not None:
             for step in completed_steps_laconic:
                 print(f"- {step}")
             print(f"\n{CLI_GREEN}AGENT ANSWER: {answer}{CLI_CLR}")
-            if grounding_refs:
-                for ref in grounding_refs:
-                    print(f"- {CLI_GREEN}{ref}{CLI_CLR}")
+            for ref in grounding_refs:
+                print(f"- {CLI_GREEN}{ref}{CLI_CLR}")
             _tool_result(wrapper.context, "report_completion", req_args, completion.model_dump_json())
         except ConnectError as err:
             print(f"{CLI_RED}ERR {err.code}: {err.message}{CLI_CLR}")
@@ -240,9 +235,10 @@ def _stop_on_report_completion(wrapper: Any, results: List[Any]) -> Any:
 
 
 class ReActLoopStage:
-    def __init__(self, vm, model: str):
+    def __init__(self, vm, model: str, prompt_manager: PromptManager):
         self._vm = vm
         self._model = model
+        self._prompt_manager = prompt_manager
 
     def execute(self, ctx: PipelineContext, logger) -> None:
         _ensure_sdk()
@@ -254,7 +250,7 @@ class ReActLoopStage:
         runtime = AgentRuntimeContext(vm=self._vm, pipeline=ctx, logger=logger, model=self._model)
         agent = Agent(
             name="Sandbox ReAct Agent",
-            instructions=SYSTEM_PROMPT,
+            instructions=self._prompt_manager.get("system"),
             model=self._model,
             tools=[tree, search, list, read, write, delete, report_completion],
             output_type=ReportTaskCompletion,

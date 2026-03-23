@@ -17,7 +17,8 @@ from bitgn.vm.mini_pb2 import (
 )
 
 from agent_pipeline.models import PipelineContext
-from agent_pipeline.prompts import SYSTEM_PROMPT, build_initial_user_message
+from agent_pipeline.prompts import build_initial_user_message
+from .prompt_manager import PromptManager
 
 MAX_STEPS = 30
 
@@ -89,7 +90,11 @@ TOOLS = [
     },
     {
         "name": "report_completion",
-        "description": "Report task completion with the final answer. Call this when the task is done.",
+        "description": (
+            "Report task completion with the final answer. Call this when the task is done. "
+            "grounding_refs MUST include: (1) the AGENTS.MD canonical path from the section header, "
+            "(2) every file path you read, wrote, or deleted."
+        ),
         "input_schema": {
             "type": "object",
             "properties": {
@@ -120,7 +125,7 @@ def _dispatch_tool(vm: MiniRuntimeClientSync, tool_name: str, tool_input: dict) 
             return vm.read(ReadRequest(path=tool_input["path"])).content
         elif tool_name == "write":
             return json.dumps(MessageToDict(vm.write(WriteRequest(
-                path=tool_input["path"], content=tool_input["content"]
+                path=tool_input["path"], content=tool_input["content"].rstrip("\n")
             ))), indent=2)
         elif tool_name == "delete":
             return json.dumps(MessageToDict(vm.delete(DeleteRequest(path=tool_input["path"]))), indent=2)
@@ -131,10 +136,12 @@ def _dispatch_tool(vm: MiniRuntimeClientSync, tool_name: str, tool_input: dict) 
 
 
 class ReActLoopStage:
-    def __init__(self, vm: MiniRuntimeClientSync, client: anthropic.Anthropic, model: str):
+    def __init__(self, vm: MiniRuntimeClientSync, client: anthropic.Anthropic, model: str,
+                 prompt_manager: PromptManager):
         self._vm = vm
         self._client = client
         self._model = model
+        self._prompt_manager = prompt_manager
 
     def execute(self, ctx: PipelineContext, logger) -> None:
         prompt = build_initial_user_message(
@@ -149,7 +156,7 @@ class ReActLoopStage:
             response = self._client.messages.create(
                 model=self._model,
                 max_tokens=4096,
-                system=SYSTEM_PROMPT,
+                system=self._prompt_manager.get("system"),
                 tools=TOOLS,
                 messages=messages,
             )
@@ -179,6 +186,7 @@ class ReActLoopStage:
                             grounding_refs = json.loads(grounding_refs)
                         except Exception:
                             grounding_refs = []
+                    grounding_refs = [r.lstrip("/") for r in grounding_refs if isinstance(r, str)]
                     code = tool_input.get("code", "completed")
 
                     if not answer:

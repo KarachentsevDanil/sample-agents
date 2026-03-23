@@ -10,6 +10,7 @@ from bitgn.vm.mini_connect import MiniRuntimeClientSync
 from .context import ContextBuilderStage
 from .react import ReActLoopStage
 from .verifier import VerifierStage
+from .prompt_manager import PromptManager
 from agent_pipeline.logger import RunLogger
 from agent_pipeline.models import PipelineContext
 
@@ -24,17 +25,18 @@ class Pipeline:
         self._run_dir = run_dir
         self._client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
         self._stages: list = []
+        self._prompt_manager = PromptManager()
 
     def use_context(self) -> "Pipeline":
-        self._stages.append(ContextBuilderStage(self._vm, self._client, self._model))
+        self._stages.append(ContextBuilderStage(self._vm, self._client, self._model, self._prompt_manager))
         return self
 
     def use_react(self) -> "Pipeline":
-        self._stages.append(ReActLoopStage(self._vm, self._client, self._model))
+        self._stages.append(ReActLoopStage(self._vm, self._client, self._model, self._prompt_manager))
         return self
 
     def use_response_verifier(self) -> "Pipeline":
-        self._stages.append(VerifierStage(self._client, self._model))
+        self._stages.append(VerifierStage(self._client, self._model, self._prompt_manager))
         return self
 
     def run(self) -> PipelineContext:
@@ -46,6 +48,7 @@ class Pipeline:
             "model": self._model,
             "task_fragment": self._task[:200],
             "started_at": datetime.now(timezone.utc).isoformat(),
+            "prompt_versions": self._prompt_manager.active_versions(),
         })
 
         for stage in self._stages:

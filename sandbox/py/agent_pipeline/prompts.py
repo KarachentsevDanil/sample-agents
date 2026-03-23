@@ -46,7 +46,7 @@ def build_initial_user_message(
     parts = [f"[TASK]\n{task}"]
 
     if agents_md:
-        label = f"AGENTS.md (canonical path: {agents_md_path})" if agents_md_path else "AGENTS.md"
+        label = f"AGENTS.MD (canonical path: {agents_md_path})" if agents_md_path else "AGENTS.MD"
         parts.append(f"[{label} — mandatory instructions]\n{agents_md}")
 
     if dfs_tree:

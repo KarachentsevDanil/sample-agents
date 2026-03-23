@@ -1,5 +1,5 @@
 from .models import VerificationResult
-from .prompts import VERIFIER_PROMPT
+from .prompt_manager import PromptManager
 
 try:
     from agents import Agent, Runner
@@ -9,8 +9,9 @@ except ImportError:
 
 
 class VerifierStage:
-    def __init__(self, model: str):
+    def __init__(self, model: str, prompt_manager: PromptManager):
         self._model = model
+        self._prompt_manager = prompt_manager
 
     def execute(self, ctx, logger) -> None:
         if not ctx.final_answer:
@@ -30,7 +31,7 @@ class VerifierStage:
         trace_summary = self._summarize_trace(ctx.react_trace)
         agent = Agent(
             name="Final Verifier",
-            instructions=VERIFIER_PROMPT,
+            instructions=self._prompt_manager.get("verifier"),
             model=self._model,
             output_type=VerificationResult,
         )
@@ -65,7 +66,7 @@ class VerifierStage:
     @staticmethod
     def _summarize_trace(trace: list) -> str:
         lines = [
-            f"Step {s['step']}: {s['function']} — {s.get('result_summary', '')[:120]}"
-            for s in trace
+            f"Step {i + 1}: {s.get('cmd', '?')} — {str(s.get('args', ''))[:120]}"
+            for i, s in enumerate(trace)
         ]
         return "\n".join(lines) if lines else "(no steps)"

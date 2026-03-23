@@ -1,13 +1,14 @@
 import anthropic
 
 from agent_pipeline.models import PipelineContext, VerificationResult
-from agent_pipeline.prompts import VERIFIER_PROMPT
+from .prompt_manager import PromptManager
 
 
 class VerifierStage:
-    def __init__(self, client: anthropic.Anthropic, model: str):
+    def __init__(self, client: anthropic.Anthropic, model: str, prompt_manager: PromptManager):
         self._client = client
         self._model = model
+        self._prompt_manager = prompt_manager
 
     def execute(self, ctx: PipelineContext, logger) -> None:
         if not ctx.final_answer:
@@ -24,7 +25,7 @@ class VerifierStage:
             resp = self._client.messages.parse(
                 model=self._model,
                 max_tokens=512,
-                system=VERIFIER_PROMPT,
+                system=self._prompt_manager.get("verifier"),
                 messages=[
                     {
                         "role": "user",

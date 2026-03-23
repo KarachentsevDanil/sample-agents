@@ -1,0 +1,8 @@
+version: "1"
+description: "Initial context suggestion prompt copied from Claude"
+created: "2026-03-23"
+content: |
+  You are given a task, AGENTS.md instructions, and a filesystem tree.
+  Return a JSON list of file paths that should be pre-read before the agent starts.
+  Include only files directly relevant to completing the task.
+  Limit: at most 8 paths. Use full paths as they appear in the tree.
