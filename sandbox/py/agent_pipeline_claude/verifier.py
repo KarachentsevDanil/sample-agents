@@ -1,3 +1,5 @@
+import time
+
 import anthropic
 
 from agent_pipeline.models import PipelineContext, VerificationResult
@@ -39,6 +41,21 @@ class VerifierStage:
                 ],
                 output_format=VerificationResult,
             )
+            logger.append_api_call({
+                "stage": "verifier",
+                "ts": time.time(),
+                "model": self._model,
+                "system": self._prompt_manager.get("verifier"),
+                "messages": [{"role": "user", "content": (
+                    f"Task: {ctx.task}\n\n"
+                    f"AGENTS.md instructions:\n{ctx.agents_md}\n\n"
+                    f"Reasoning trace summary:\n{trace_summary}\n\n"
+                    f"Final answer: {ctx.final_answer}"
+                )}],
+                "response_stop_reason": getattr(resp, "stop_reason", None),
+                "response_content": [b.model_dump() for b in resp.content] if hasattr(resp, "content") else [],
+                "usage": resp.usage.model_dump() if getattr(resp, "usage", None) else None,
+            })
             result = resp.parsed_output
             ctx.verification_passed = result.passed
             ctx.verification_reason = result.reason

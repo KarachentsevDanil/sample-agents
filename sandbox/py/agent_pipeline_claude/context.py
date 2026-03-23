@@ -1,3 +1,5 @@
+import time
+
 import anthropic
 from connectrpc.errors import ConnectError
 
@@ -22,7 +24,7 @@ class ContextBuilderStage:
     def execute(self, ctx: PipelineContext, logger) -> None:
         ctx.agents_md_path, ctx.agents_md = self._fetch_agents_md()
         ctx.dfs_tree = self._fetch_dfs()
-        suggested = self._suggest_files(ctx)
+        suggested = self._suggest_files(ctx, logger)
         ctx.preread_files = self._read_files(suggested)
         ctx.past_mistakes = logger.load_past_mistakes()
 
@@ -68,7 +70,7 @@ class ContextBuilderStage:
         except ConnectError:
             pass
 
-    def _suggest_files(self, ctx: PipelineContext) -> list:
+    def _suggest_files(self, ctx: PipelineContext, logger) -> list:
         if not ctx.dfs_tree:
             return []
         try:
@@ -88,6 +90,18 @@ class ContextBuilderStage:
                 ],
                 output_format=FileSuggestion,
             )
+            logger.append_api_call({
+                "stage": "context",
+                "ts": time.time(),
+                "model": self._model,
+                "system": self._prompt_manager.get("context"),
+                "messages": [{"role": "user", "content": (
+                    f"Task: {ctx.task}\n\nAGENTS.md:\n{ctx.agents_md}\n\nFilesystem:\n{ctx.dfs_tree}"
+                )}],
+                "response_stop_reason": getattr(resp, "stop_reason", None),
+                "response_content": [b.model_dump() for b in resp.content] if hasattr(resp, "content") else [],
+                "usage": resp.usage.model_dump() if getattr(resp, "usage", None) else None,
+            })
             result = resp.parsed_output
             return (result.files_to_read or [])[:MAX_PREREAD_FILES]
         except Exception:

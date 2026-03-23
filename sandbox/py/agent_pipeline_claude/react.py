@@ -22,6 +22,20 @@ from .prompt_manager import PromptManager
 
 MAX_STEPS = 30
 
+
+def _serialize_messages(messages: list) -> list:
+    out = []
+    for msg in messages:
+        content = msg.get("content")
+        if isinstance(content, list):
+            serialized = [
+                b.model_dump() if hasattr(b, "model_dump") else b for b in content
+            ]
+            out.append({"role": msg["role"], "content": serialized})
+        else:
+            out.append(msg)
+    return out
+
 CLI_RED = "\x1B[31m"
 CLI_GREEN = "\x1B[32m"
 CLI_CLR = "\x1B[0m"
@@ -161,6 +175,17 @@ class ReActLoopStage:
                 messages=messages,
             )
 
+            logger.append_api_call({
+                "stage": "react",
+                "step": step_count,
+                "ts": time.time(),
+                "model": self._model,
+                "system": self._prompt_manager.get("system"),
+                "messages": _serialize_messages(messages),
+                "response_stop_reason": response.stop_reason,
+                "response_content": [b.model_dump() for b in response.content],
+                "usage": response.usage.model_dump() if response.usage else None,
+            })
             messages.append({"role": "assistant", "content": response.content})
 
             if response.stop_reason != "tool_use":
