@@ -15,6 +15,20 @@ Run it with:
 uv run python main.py
 ```
 
+To run the new OpenAI Agents SDK backend instead of the legacy pipeline:
+
+```bash
+AGENT_PIPELINE_BACKEND=openai_agents uv run python main.py
+```
+
+To run the LangChain backend:
+
+```bash
+AGENT_PIPELINE_BACKEND=langchain uv run python main.py
+```
+
+Install dependencies after pulling the change so `openai-agents`, `langchain`, and `langchain-openai` are available in the uv environment.
+
 It should print something like that:
 
 

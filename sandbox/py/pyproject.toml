@@ -8,7 +8,18 @@ dependencies = [
     "bitgn-api-connectrpc-python==0.8.1.1.20260316101438+5e72a3f6bebf",
     "bitgn-api-protocolbuffers-python==34.0.0.1.20260316101438+5e72a3f6bebf",
     "openai>=2.26.0",
+    "openai-agents>=0.2.0",
+    "anthropic>=0.45.0",
+    "claude-agent-sdk>=0.1.0",
+    "anyio>=4.0.0",
+    "langchain==1.2.13",
+    "langchain-openai==1.1.8",
+    "langgraph==1.1.3",
     "pydantic>=2.12.5",
+    "flask>=3.0.0",
+    "flasgger>=0.9.7.1",
+    "flask-cors>=4.0.0",
+    "python-dotenv>=1.0.0",
 ]
 
 [[tool.uv.index]]

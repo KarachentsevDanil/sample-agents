@@ -1,7 +1,5 @@
 import os
-import argparse
 import textwrap
-import json
 from datetime import datetime
 from pathlib import Path
 
@@ -9,13 +7,12 @@ from bitgn.harness_connect import HarnessServiceClientSync
 from bitgn.harness_pb2 import StatusRequest, GetBenchmarkRequest, StartPlaygroundRequest, EvalPolicy, EndTrialRequest
 from connectrpc.errors import ConnectError
 
+from agent_pipeline_claude import run_agent
+from agent_pipeline.logger import log_benchmark_result
+
 BITGN_URL = os.getenv("BENCHMARK_HOST") or "https://api.bitgn.com"
 
-_DEFAULT_MODELS = {
-    "claude_cli": "claude-sonnet-4-6",
-}
-_DEFAULT_MODEL_FALLBACK = "gpt-5.4-nano"
-
+MODEL_ID = "claude-haiku-4-5"
 
 CLI_RED = "\x1B[31m"
 CLI_GREEN = "\x1B[32m"
@@ -24,7 +21,7 @@ CLI_CLR = "\x1B[0m"
 
 def _make_run_dir() -> Path:
     today = datetime.now().strftime("%Y%m%d")
-    base = Path("runs")
+    base = Path("claude_runs")
     n = len(list(base.glob(f"{today}_run*"))) + 1 if base.exists() else 1
     run_dir = base / f"{today}_run{n}"
     run_dir.mkdir(parents=True, exist_ok=True)
@@ -32,51 +29,7 @@ def _make_run_dir() -> Path:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Run agent benchmark")
-    parser.add_argument(
-        "-p", "--pipeline",
-        default=os.getenv("AGENT_PIPELINE_BACKEND", "agent_pipeline"),
-        choices=["legacy", "agent_pipeline", "openai_agents", "langchain", "langgraph", "claude_cli"],
-        help="Pipeline backend to use (default: agent_pipeline, or AGENT_PIPELINE_BACKEND env var)",
-    )
-    parser.add_argument(
-        "-m", "--model",
-        default=None,
-        help="Model ID override (default depends on pipeline)",
-    )
-    parser.add_argument(
-        "tasks",
-        nargs="*",
-        help="Optional task IDs to run (e.g. t01 t02); runs all if omitted",
-    )
-    args = parser.parse_args()
-
-    BACKEND = args.pipeline.strip().lower()
-    MODEL_ID = args.model or _DEFAULT_MODELS.get(BACKEND, _DEFAULT_MODEL_FALLBACK)
-    task_filter = args.tasks
-
-    if BACKEND == "openai_agents":
-        from agent_pipeline_openai import run_agent
-        from agent_pipeline_openai.logger import log_benchmark_result
-    elif BACKEND == "langchain":
-        from agent_pipeline_langchain import run_agent
-        from agent_pipeline.logger import log_benchmark_result
-    elif BACKEND == "langgraph":
-        from agent_pipeline_langgraph import run_agent
-        from agent_pipeline.logger import log_benchmark_result
-    elif BACKEND == "claude_cli":
-        from agent_pipeline_claude import run_agent
-        from agent_pipeline.logger import log_benchmark_result
-    elif BACKEND in {"legacy", "agent_pipeline"}:
-        from agent_pipeline import run_agent
-        from agent_pipeline.logger import log_benchmark_result
-    else:
-        raise RuntimeError(
-            f"Unsupported --pipeline={BACKEND!r}. "
-            "Expected one of: legacy, agent_pipeline, openai_agents, langchain, langgraph, claude_cli."
-        )
-
-    print(f"Pipeline: {BACKEND} | Model: {MODEL_ID}")
+    task_filter = os.sys.argv[1:]
 
     run_dir = _make_run_dir()
     scores = []
@@ -86,7 +39,6 @@ def main() -> None:
         print("Connecting to BitGN", client.status(StatusRequest()))
         res = client.get_benchmark(GetBenchmarkRequest(benchmark_id="bitgn/sandbox"))
         print(f"{EvalPolicy.Name(res.policy)} benchmark: {res.benchmark_id} with {len(res.tasks)} tasks.\n{CLI_GREEN}{res.description}{CLI_CLR}")
-
 
         for t in res.tasks:
             if task_filter and t.task_id not in task_filter:
@@ -130,13 +82,11 @@ def main() -> None:
     except KeyboardInterrupt:
         print(f"{CLI_RED}Interrupted{CLI_CLR}")
 
-    # print scores as table
     if scores:
         for tid, score in scores:
             style = CLI_GREEN if score == 1 else CLI_RED
             print(f"{tid}: {style}{score:0.2f}{CLI_CLR}")
 
-        # print average
         total = sum([t[1] for t in scores]) / len(scores) * 100.0
         print(f"FINAL: {total:0.2f}%")
 
