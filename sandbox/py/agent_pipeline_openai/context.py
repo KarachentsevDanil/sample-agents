@@ -1,4 +1,4 @@
-import json
+import time
 
 from connectrpc.errors import ConnectError
 from google.protobuf.json_format import MessageToDict
@@ -10,10 +10,9 @@ from .prompt_manager import PromptManager
 MAX_PREREAD_FILES = 8
 
 try:
-    from agents import Agent, ModelSettings, Runner
+    from agents import Agent, Runner
 except ImportError:
     Agent = None
-    ModelSettings = None
     Runner = None
 
 
@@ -26,7 +25,7 @@ class ContextBuilderStage:
     def execute(self, ctx: PipelineContext, logger) -> None:
         ctx.agents_md_path, ctx.agents_md = self._fetch_agents_md()
         ctx.dfs_tree = self._fetch_dfs()
-        suggested = self._suggest_files(ctx)
+        suggested = self._suggest_files(ctx, logger)
         ctx.preread_files = self._read_files(suggested)
         ctx.past_mistakes = logger.load_past_mistakes()
 
@@ -66,7 +65,7 @@ class ContextBuilderStage:
         except ConnectError:
             pass
 
-    def _suggest_files(self, ctx: PipelineContext) -> list[str]:
+    def _suggest_files(self, ctx: PipelineContext, logger) -> list[str]:
         if not ctx.dfs_tree or Agent is None or Runner is None:
             return []
 
@@ -75,7 +74,6 @@ class ContextBuilderStage:
             instructions=self._prompt_manager.get("context"),
             model=self._model,
             output_type=FileSuggestion,
-            model_settings=ModelSettings() if ModelSettings is not None else None,
         )
         prompt = (
             f"Task: {ctx.task}\n\n"
@@ -87,24 +85,15 @@ class ContextBuilderStage:
         except Exception:
             return []
 
+        logger.append_api_call({
+            "stage": "context",
+            "ts": time.time(),
+            "model": self._model,
+            "input_fragment": prompt[:200],
+        })
         parsed = result.final_output
         if isinstance(parsed, FileSuggestion):
             return (parsed.files_to_read or [])[:MAX_PREREAD_FILES]
-        if isinstance(parsed, list):
-            return [p for p in parsed if isinstance(p, str)][:MAX_PREREAD_FILES]
-        if isinstance(parsed, dict):
-            files = parsed.get("files_to_read") or []
-            return [p for p in files if isinstance(p, str)][:MAX_PREREAD_FILES]
-        if isinstance(parsed, str):
-            try:
-                decoded = json.loads(parsed)
-            except Exception:
-                return []
-            if isinstance(decoded, list):
-                return [p for p in decoded if isinstance(p, str)][:MAX_PREREAD_FILES]
-            if isinstance(decoded, dict):
-                files = decoded.get("files_to_read") or []
-                return [p for p in files if isinstance(p, str)][:MAX_PREREAD_FILES]
         return []
 
     def _read_files(self, paths: list[str]) -> dict:

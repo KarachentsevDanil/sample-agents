@@ -1,7 +1,6 @@
 import os
 import argparse
 import textwrap
-import json
 from datetime import datetime
 from pathlib import Path
 
@@ -12,7 +11,8 @@ from connectrpc.errors import ConnectError
 BITGN_URL = os.getenv("BENCHMARK_HOST") or "https://api.bitgn.com"
 
 _DEFAULT_MODELS = {
-    "claude_cli": "claude-sonnet-4-6",
+    "claude": "claude-sonnet-4-6",
+    "openai": "gpt-5.4-nano",
 }
 _DEFAULT_MODEL_FALLBACK = "gpt-5.4-nano"
 
@@ -35,9 +35,9 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Run agent benchmark")
     parser.add_argument(
         "-p", "--pipeline",
-        default=os.getenv("AGENT_PIPELINE_BACKEND", "agent_pipeline"),
-        choices=["legacy", "agent_pipeline", "openai_agents", "langchain", "langgraph", "claude_cli"],
-        help="Pipeline backend to use (default: agent_pipeline, or AGENT_PIPELINE_BACKEND env var)",
+        default=os.getenv("AGENT_PIPELINE_BACKEND", "claude"),
+        choices=["claude", "openai"],
+        help="Pipeline backend to use (default: claude, or AGENT_PIPELINE_BACKEND env var)",
     )
     parser.add_argument(
         "-m", "--model",
@@ -55,26 +55,14 @@ def main() -> None:
     MODEL_ID = args.model or _DEFAULT_MODELS.get(BACKEND, _DEFAULT_MODEL_FALLBACK)
     task_filter = args.tasks
 
-    if BACKEND == "openai_agents":
+    if BACKEND == "claude":
+        from agent_pipeline_claude import run_agent
+        from agent_pipeline_claude.logger import log_benchmark_result
+    elif BACKEND == "openai":
         from agent_pipeline_openai import run_agent
         from agent_pipeline_openai.logger import log_benchmark_result
-    elif BACKEND == "langchain":
-        from agent_pipeline_langchain import run_agent
-        from agent_pipeline.logger import log_benchmark_result
-    elif BACKEND == "langgraph":
-        from agent_pipeline_langgraph import run_agent
-        from agent_pipeline.logger import log_benchmark_result
-    elif BACKEND == "claude_cli":
-        from agent_pipeline_claude import run_agent
-        from agent_pipeline.logger import log_benchmark_result
-    elif BACKEND in {"legacy", "agent_pipeline"}:
-        from agent_pipeline import run_agent
-        from agent_pipeline.logger import log_benchmark_result
     else:
-        raise RuntimeError(
-            f"Unsupported --pipeline={BACKEND!r}. "
-            "Expected one of: legacy, agent_pipeline, openai_agents, langchain, langgraph, claude_cli."
-        )
+        raise RuntimeError(f"Unsupported --pipeline={BACKEND!r}. Expected one of: claude, openai.")
 
     print(f"Pipeline: {BACKEND} | Model: {MODEL_ID}")
 

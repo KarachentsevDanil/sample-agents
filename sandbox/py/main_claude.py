@@ -8,7 +8,7 @@ from bitgn.harness_pb2 import StatusRequest, GetBenchmarkRequest, StartPlaygroun
 from connectrpc.errors import ConnectError
 
 from agent_pipeline_claude import run_agent
-from agent_pipeline.logger import log_benchmark_result
+from agent_pipeline_claude.logger import log_benchmark_result
 
 BITGN_URL = os.getenv("BENCHMARK_HOST") or "https://api.bitgn.com"
 

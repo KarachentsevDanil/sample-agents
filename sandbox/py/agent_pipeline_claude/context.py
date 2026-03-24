@@ -7,7 +7,8 @@ from bitgn.vm.mini_connect import MiniRuntimeClientSync
 from bitgn.vm.mini_pb2 import ListRequest, ReadRequest
 from google.protobuf.json_format import MessageToDict
 
-from agent_pipeline.models import FileSuggestion, PipelineContext
+from .models import FileSuggestion, PipelineContext
+from ._logging import build_api_log_entry
 from .prompt_manager import PromptManager
 
 MAX_PREREAD_FILES = 8
@@ -56,13 +57,16 @@ class ContextBuilderStage:
             data = MessageToDict(resp)
             prefix = vm_path.strip("/")  # "/" → "", "/docs" → "docs"
 
+            def _entry_name(entry) -> str:
+                return (entry.get("path") or entry.get("name") or entry) if isinstance(entry, dict) else entry
+
             for fname in (data.get("files") or []):
-                name = (fname.get("path") or fname.get("name") or fname) if isinstance(fname, dict) else fname
+                name = _entry_name(fname)
                 if name:
                     result.append(f"{prefix}/{name}" if prefix else name)
 
             for dname in (data.get("folders") or []):
-                name = (dname.get("path") or dname.get("name") or dname) if isinstance(dname, dict) else dname
+                name = _entry_name(dname)
                 if name:
                     display = f"{prefix}/{name}" if prefix else name
                     result.append(display)
@@ -74,34 +78,22 @@ class ContextBuilderStage:
         if not ctx.dfs_tree:
             return []
         try:
+            user_content = (
+                f"Task: {ctx.task}\n\n"
+                f"AGENTS.md:\n{ctx.agents_md}\n\n"
+                f"Filesystem:\n{ctx.dfs_tree}"
+            )
             resp = self._client.messages.parse(
                 model=self._model,
                 max_tokens=1024,
                 system=self._prompt_manager.get("context"),
-                messages=[
-                    {
-                        "role": "user",
-                        "content": (
-                            f"Task: {ctx.task}\n\n"
-                            f"AGENTS.md:\n{ctx.agents_md}\n\n"
-                            f"Filesystem:\n{ctx.dfs_tree}"
-                        ),
-                    }
-                ],
+                messages=[{"role": "user", "content": user_content}],
                 output_format=FileSuggestion,
             )
-            logger.append_api_call({
-                "stage": "context",
-                "ts": time.time(),
-                "model": self._model,
-                "system": self._prompt_manager.get("context"),
-                "messages": [{"role": "user", "content": (
-                    f"Task: {ctx.task}\n\nAGENTS.md:\n{ctx.agents_md}\n\nFilesystem:\n{ctx.dfs_tree}"
-                )}],
-                "response_stop_reason": getattr(resp, "stop_reason", None),
-                "response_content": [b.model_dump() for b in resp.content] if hasattr(resp, "content") else [],
-                "usage": resp.usage.model_dump() if getattr(resp, "usage", None) else None,
-            })
+            logger.append_api_call(build_api_log_entry(
+                "context", self._model, self._prompt_manager.get("context"),
+                [{"role": "user", "content": user_content}], resp,
+            ))
             result = resp.parsed_output
             return (result.files_to_read or [])[:MAX_PREREAD_FILES]
         except Exception:

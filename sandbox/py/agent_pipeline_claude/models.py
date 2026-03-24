@@ -1,6 +1,6 @@
 import hashlib
 from dataclasses import dataclass, field
-from typing import Annotated, Any, List, Literal, Union
+from typing import Annotated, List, Literal, Union
 
 from annotated_types import Ge, Le, MaxLen, MinLen
 from pydantic import BaseModel, Field
@@ -96,12 +96,3 @@ class PipelineContext:
     @property
     def task_hash(self) -> str:
         return hashlib.sha256(self.task.encode()).hexdigest()[:16]
-
-
-@dataclass
-class AgentRuntimeContext:
-    vm: Any
-    pipeline: PipelineContext
-    logger: Any
-    model: str
-    step_idx: int = 0

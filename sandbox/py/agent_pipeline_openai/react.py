@@ -15,16 +15,13 @@ from bitgn.vm.mini_pb2 import (
     WriteRequest,
 )
 
-from agent_pipeline.prompts import build_initial_user_message
+from .prompts import build_initial_user_message
 
+from ._cli import CLI_RED, CLI_GREEN, CLI_CLR
 from .models import AgentRuntimeContext, PipelineContext, ReportTaskCompletion
 from .prompt_manager import PromptManager
 
 MAX_STEPS = 30
-
-CLI_RED = "\x1B[31m"
-CLI_GREEN = "\x1B[32m"
-CLI_CLR = "\x1B[0m"
 
 try:
     from agents import Agent, RunContextWrapper, Runner, function_tool

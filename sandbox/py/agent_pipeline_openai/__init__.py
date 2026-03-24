@@ -3,9 +3,6 @@ from bitgn.vm.mini_connect import MiniRuntimeClientSync
 from .pipeline import Pipeline
 from openai_config import configure_openai_agents_sdk
 
-CLI_GREEN = "\x1B[32m"
-CLI_CLR = "\x1B[0m"
-
 
 def run_agent(model: str, harness_url: str, task_text: str,
               task_id: str = "", run_dir=None) -> str:

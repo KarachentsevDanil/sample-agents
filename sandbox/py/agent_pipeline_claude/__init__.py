@@ -1,9 +1,9 @@
 from bitgn.vm.mini_connect import MiniRuntimeClientSync
 
 from .pipeline import Pipeline
+from ._cli import CLI_GREEN, CLI_CLR
 
-CLI_GREEN = "\x1B[32m"
-CLI_CLR = "\x1B[0m"
+__all__ = ["run_agent"]
 
 
 def run_agent(model: str, harness_url: str, task_text: str,

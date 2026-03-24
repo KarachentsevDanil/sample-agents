@@ -11,8 +11,8 @@ from .context import ContextBuilderStage
 from .react import ReActLoopStage
 from .verifier import VerifierStage
 from .prompt_manager import PromptManager
-from agent_pipeline.logger import RunLogger
-from agent_pipeline.models import PipelineContext
+from .logger import RunLogger
+from .models import PipelineContext
 
 
 class Pipeline:

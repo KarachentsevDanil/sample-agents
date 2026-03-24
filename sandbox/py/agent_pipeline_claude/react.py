@@ -16,111 +16,22 @@ from bitgn.vm.mini_pb2 import (
     WriteRequest,
 )
 
-from agent_pipeline.models import PipelineContext
-from agent_pipeline.prompts import build_initial_user_message
+from .models import PipelineContext
+from .prompts import build_initial_user_message
+from ._cli import CLI_RED, CLI_GREEN, CLI_CLR
+from ._logging import build_api_log_entry
 from .prompt_manager import PromptManager
+from .tools import TOOLS
 
 MAX_STEPS = 30
 
 
 def _serialize_messages(messages: list) -> list:
-    out = []
-    for msg in messages:
-        content = msg.get("content")
-        if isinstance(content, list):
-            serialized = [
-                b.model_dump() if hasattr(b, "model_dump") else b for b in content
-            ]
-            out.append({"role": msg["role"], "content": serialized})
-        else:
-            out.append(msg)
-    return out
-
-CLI_RED = "\x1B[31m"
-CLI_GREEN = "\x1B[32m"
-CLI_CLR = "\x1B[0m"
-
-TOOLS = [
-    {
-        "name": "tree",
-        "description": "Get directory tree / filesystem outline for a path",
-        "input_schema": {
-            "type": "object",
-            "properties": {"path": {"type": "string", "description": "folder path"}},
-            "required": ["path"],
-        },
-    },
-    {
-        "name": "search",
-        "description": "Search for a regex pattern in files under a path",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "pattern": {"type": "string"},
-                "path": {"type": "string", "default": "/"},
-                "count": {"type": "integer", "minimum": 1, "maximum": 10, "default": 5},
-            },
-            "required": ["pattern"],
-        },
-    },
-    {
-        "name": "list",
-        "description": "List directory contents",
-        "input_schema": {
-            "type": "object",
-            "properties": {"path": {"type": "string"}},
-            "required": ["path"],
-        },
-    },
-    {
-        "name": "read",
-        "description": "Read the contents of a file",
-        "input_schema": {
-            "type": "object",
-            "properties": {"path": {"type": "string"}},
-            "required": ["path"],
-        },
-    },
-    {
-        "name": "write",
-        "description": "Write content to a file",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "path": {"type": "string"},
-                "content": {"type": "string"},
-            },
-            "required": ["path", "content"],
-        },
-    },
-    {
-        "name": "delete",
-        "description": "Delete a file",
-        "input_schema": {
-            "type": "object",
-            "properties": {"path": {"type": "string"}},
-            "required": ["path"],
-        },
-    },
-    {
-        "name": "report_completion",
-        "description": (
-            "Report task completion with the final answer. Call this when the task is done. "
-            "grounding_refs MUST include: (1) the AGENTS.MD canonical path from the section header, "
-            "(2) every file path you read, wrote, or deleted."
-        ),
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "answer": {"type": "string"},
-                "completed_steps_laconic": {"type": "array", "items": {"type": "string"}},
-                "grounding_refs": {"type": "array", "items": {"type": "string"}},
-                "code": {"type": "string", "enum": ["completed", "failed"]},
-            },
-            "required": ["answer", "completed_steps_laconic", "code"],
-        },
-    },
-]
+    return [
+        {**m, "content": [b.model_dump() if hasattr(b, "model_dump") else b for b in m["content"]]}
+        if isinstance(m.get("content"), list) else m
+        for m in messages
+    ]
 
 
 def _dispatch_tool(vm: MiniRuntimeClientSync, tool_name: str, tool_input: dict) -> str:
@@ -175,17 +86,11 @@ class ReActLoopStage:
                 messages=messages,
             )
 
-            logger.append_api_call({
-                "stage": "react",
-                "step": step_count,
-                "ts": time.time(),
-                "model": self._model,
-                "system": self._prompt_manager.get("system"),
-                "messages": _serialize_messages(messages),
-                "response_stop_reason": response.stop_reason,
-                "response_content": [b.model_dump() for b in response.content],
-                "usage": response.usage.model_dump() if response.usage else None,
-            })
+            logger.append_api_call(build_api_log_entry(
+                "react", self._model, self._prompt_manager.get("system"),
+                _serialize_messages(messages), response,
+                step=step_count,
+            ))
             messages.append({"role": "assistant", "content": response.content})
 
             if response.stop_reason != "tool_use":
