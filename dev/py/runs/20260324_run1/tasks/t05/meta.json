@@ -1,0 +1,11 @@
+{
+  "task_id": "t05",
+  "model": "claude-sonnet-4-6",
+  "task_fragment": "Create a calendar invite with John about agent workflow retrospective for tomorrow morning.",
+  "started_at": "2026-03-24T07:51:49.197242+00:00",
+  "prompt_versions": {
+    "system": "v7",
+    "context": "v1",
+    "verifier": "v1"
+  }
+}

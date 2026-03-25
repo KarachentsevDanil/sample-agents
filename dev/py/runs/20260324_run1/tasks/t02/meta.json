@@ -1,0 +1,11 @@
+{
+  "task_id": "t02",
+  "model": "claude-sonnet-4-6",
+  "task_fragment": "Discard thread 2026-03-23__ai-engineering-foundations entirely, don't touch anything else",
+  "started_at": "2026-03-24T07:50:02.279584+00:00",
+  "prompt_versions": {
+    "system": "v7",
+    "context": "v1",
+    "verifier": "v1"
+  }
+}

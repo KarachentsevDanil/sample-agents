@@ -1,0 +1,11 @@
+{
+  "task_id": "t01",
+  "model": "claude-sonnet-4-6",
+  "task_fragment": "Let's start over. Remove all captured cards and threads. Do not touch anything else",
+  "started_at": "2026-03-24T07:49:40.437696+00:00",
+  "prompt_versions": {
+    "system": "v7",
+    "context": "v1",
+    "verifier": "v1"
+  }
+}

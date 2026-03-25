@@ -1,0 +1,30 @@
+[project]
+name = "bitgn-pac1-py"
+version = "0.1.0"
+description = "Runnable Python sample for the BitGN PAC1 benchmark"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "bitgn-api-connectrpc-python==0.9.0.1.20260323140311+cbbd8b9c3c20",
+    "bitgn-api-protocolbuffers-python==34.1.0.1.20260323140311+cbbd8b9c3c20",
+    "openai>=2.26.0",
+    "pydantic>=2.12.5",
+    "flask>=3.0",
+    "flasgger>=0.9",
+    "flask-cors>=4.0",
+    "anthropic>=0.50",
+    "openai-agents>=0.0.16",
+    "annotated-types>=0.7",
+]
+
+[[tool.uv.index]]
+url = "https://buf.build/gen/python"
+
+[tool.uv]
+# AICODE-NOTE: `harness_core/scripts/sdk-python.sh` rewrites the Buf SDK pins
+# in this file after `buf push`; keep this project flat so the sample stays
+# runnable without packaging ceremony.
+# AICODE-NOTE: PAC1 depends on the public PCM runtime modules generated under
+# `bitgn.vm.pcm_*`; if local pins predate that schema publication, rerun
+# `make sdk-python` from `harness_core` after pushing the latest API digest.
+package = false
