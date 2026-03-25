@@ -22,12 +22,29 @@ class ContextBuilderStage:
         self._model = model
         self._prompt_manager = prompt_manager
 
+    # Files that should always be pre-read if they exist (saves ReAct loop steps)
+    MANDATORY_PREREAD_PATTERNS = [
+        "90_memory/Soul.md",
+        "02_distill/AGENTS.md",
+        "99_process/process_tasks.md",
+        "99_process/document_capture.md",
+        "02_distill/cards/_card-template.md",
+        "02_distill/threads/_thread-template.md",
+    ]
+
     def execute(self, ctx: PipelineContext, logger) -> None:
         ctx.agents_md_path, ctx.agents_md = self._fetch_agents_md()
         ctx.dfs_tree = self._fetch_dfs()
+        mandatory = self._mandatory_preread(ctx.dfs_tree)
         suggested = self._suggest_files(ctx, logger)
-        ctx.preread_files = self._read_files(suggested)
+        all_paths = list(dict.fromkeys(mandatory + suggested))[:MAX_PREREAD_FILES]
+        ctx.preread_files = self._read_files(all_paths)
         ctx.past_mistakes = logger.load_past_mistakes()
+
+    def _mandatory_preread(self, dfs_tree: str) -> list[str]:
+        """Return mandatory files that exist in the filesystem tree."""
+        tree_lines = set(dfs_tree.splitlines())
+        return [p for p in self.MANDATORY_PREREAD_PATTERNS if p in tree_lines]
 
     def _fetch_agents_md(self) -> tuple[str, str]:
         for path in ("AGENTS.MD", "AGENTS.md"):

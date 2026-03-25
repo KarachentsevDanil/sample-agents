@@ -12,10 +12,10 @@ BITGN_URL = os.getenv("BENCHMARK_HOST") or "https://api.bitgn.com"
 BENCHMARK_ID = os.getenv("BENCHMARK_ID") or "bitgn/pac1-dev"
 
 _DEFAULT_MODELS = {
-    "claude": "claude-sonnet-4-6",
-    "openai": "gpt-4.1-2025-04-14",
+    "claude": "claude-haiku-4-5-20251001",
+    "openai": "gpt-5.4-nano",
 }
-_DEFAULT_MODEL_FALLBACK = "gpt-4.1-2025-04-14"
+_DEFAULT_MODEL_FALLBACK = "gpt-5.4-nano"
 
 CLI_RED = "\x1B[31m"
 CLI_GREEN = "\x1B[32m"

@@ -1,3 +1,5 @@
+from dotenv import load_dotenv
+
 from bitgn.vm.pcm_connect import PcmRuntimeClientSync
 
 from .pipeline import Pipeline
@@ -7,6 +9,7 @@ __all__ = ["run_agent"]
 
 
 def configure_openai_agents_sdk() -> None:
+    load_dotenv()
     try:
         from agents.models.openai_responses import OpenAIResponsesModel  # noqa: F401
     except ImportError:

@@ -19,9 +19,19 @@ def build_initial_user_message(
         parts.append(f"[Pre-read file: {path}]\n{content}")
 
     if past_mistakes:
-        lines = "\n".join(
-            f"- {m.get('reason', 'unknown failure')}" for m in past_mistakes
-        )
-        parts.append(f"[Past mistakes on this task — do not repeat]\n{lines}")
+        lines = []
+        for m in past_mistakes:
+            reason = m.get("reason", "unknown failure")
+            entry = f"- MISTAKE: {reason}"
+            # Include score_detail if available (shows expected vs actual)
+            score_detail = m.get("score_detail")
+            if score_detail and isinstance(score_detail, list):
+                entry += f"\n  DETAIL: {'; '.join(str(d) for d in score_detail[:3])}"
+            # Include the answer that was wrong (truncated)
+            answer = m.get("answer_given") or m.get("agent_answer")
+            if answer:
+                entry += f"\n  YOUR WRONG ANSWER: {str(answer)[:120]}..."
+            lines.append(entry)
+        parts.append(f"[Past mistakes on this task — do not repeat]\n" + "\n".join(lines))
 
     return "\n\n".join(parts)

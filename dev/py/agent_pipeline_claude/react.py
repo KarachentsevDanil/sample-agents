@@ -189,6 +189,14 @@ class ReActLoopStage:
                     if path and path not in ctx.files_used:
                         ctx.files_used.append(path)
 
+                # Inject step budget warning when approaching the limit
+                if step_count >= MAX_STEPS - 3:
+                    result_text += (
+                        f"\n\n⚠️ STEP BUDGET WARNING: You have used {step_count}/{MAX_STEPS} steps. "
+                        "You MUST call report_completion on your NEXT action. "
+                        "Summarize what you've done and choose the correct OUTCOME code."
+                    )
+
                 tool_results.append({"type": "tool_result", "tool_use_id": tool_use_id, "content": result_text})
 
             if tool_results:

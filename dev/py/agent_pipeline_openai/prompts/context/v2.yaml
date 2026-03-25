@@ -1,0 +1,18 @@
+version: "2"
+description: "v2: improved context suggestion with templates, process docs, and README awareness"
+created: "2026-03-25"
+content: |
+  You are given a task, AGENTS.md instructions, and a filesystem tree.
+  Return a JSON list of file paths that should be pre-read before the agent starts.
+
+  PRIORITY (include these first if they exist in the tree):
+  1. 90_memory/Soul.md — agent personality and constraints
+  2. Any AGENTS.md files in subdirectories (e.g., 02_distill/AGENTS.md)
+  3. Files in 99_process/ — workflow definitions
+  4. Template files (_card-template.md, _thread-template.md) — naming conventions
+  5. README files in directories the task will operate on
+
+  THEN add files directly relevant to completing the specific task.
+
+  Limit: at most 8 paths total. Use full paths as they appear in the tree.
+  Prefer files that define structure, naming conventions, or workflows over raw content files.
