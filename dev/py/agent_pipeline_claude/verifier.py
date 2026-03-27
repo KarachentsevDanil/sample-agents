@@ -1,3 +1,6 @@
+import json
+import time
+
 import anthropic
 
 from .models import PipelineContext, VerificationResult
@@ -43,6 +46,17 @@ class VerifierStage:
             result = resp.parsed_output
             ctx.verification_passed = result.passed
             ctx.verification_reason = result.reason
+            ctx.node_counter += 1
+            logger.append_react_step({
+                "step": "verifier",
+                "node_id": str(ctx.node_counter),
+                "cmd": "verify_answer",
+                "args": {"task": ctx.task[:200], "answer": ctx.final_answer},
+                "result": json.dumps({"passed": result.passed, "reason": result.reason}),
+                "type": "validator_step",
+                "validation_passed": result.passed,
+                "ts": time.time(),
+            })
         except Exception as e:
             ctx.verification_passed = True
             ctx.verification_reason = f"Verifier error (fail-open): {e}"

@@ -7,6 +7,7 @@ from google.protobuf.json_format import MessageToDict
 
 from bitgn.vm.pcm_pb2 import (
     AnswerRequest,
+    ContextRequest,
     DeleteRequest,
     FindRequest,
     ListRequest,
@@ -24,6 +25,7 @@ from .prompts import build_initial_user_message
 from ._cli import CLI_RED, CLI_GREEN, CLI_CLR
 from .models import AgentRuntimeContext, PipelineContext, ReportTaskCompletion
 from .prompt_manager import PromptManager
+from .validator import validate_or_error
 
 MAX_STEPS = 30
 
@@ -38,12 +40,15 @@ OUTCOME_BY_NAME = {
 try:
     from agents import Agent, RunContextWrapper, Runner, function_tool
     from agents.agent import ToolsToFinalOutputResult
+    from agents.items import ItemHelpers, MessageOutputItem
 except ImportError as exc:
     Agent = None
     RunContextWrapper = Any
     Runner = None
     function_tool = None
     ToolsToFinalOutputResult = None
+    ItemHelpers = None
+    MessageOutputItem = None
     _IMPORT_ERROR = exc
 else:
     _IMPORT_ERROR = None
@@ -75,16 +80,21 @@ def _tool_result(ctx: AgentRuntimeContext, command: str, args: dict, result_text
     })
     step_record = {
         "step": ctx.step_idx,
+        "node_id": str(ctx.step_idx),
         "cmd": command,
         "args": args,
-        "result": result_text[:400],
+        "result": result_text,
         "ts": time.time(),
     }
     ctx.pipeline.react_trace.append(step_record)
     ctx.logger.append_react_step(step_record)
+    # T4: external plan progress tracking
+    if ctx.pipeline.task_plan:
+        _update_plan_progress(ctx.pipeline, command, ctx.step_idx)
     # Inject step budget warning when approaching the limit
-    if command != "report_completion" and ctx.step_idx >= MAX_STEPS - 3:
-        result_text += _STEP_BUDGET_WARNING.format(used=ctx.step_idx, max=MAX_STEPS)
+    max_steps = ctx.pipeline.react_max_steps
+    if command != "report_completion" and ctx.step_idx >= max_steps - 3:
+        result_text += _STEP_BUDGET_WARNING.format(used=ctx.step_idx, max=max_steps)
     return result_text
 
 
@@ -101,14 +111,29 @@ def _tool_error(ctx: AgentRuntimeContext, command: str, args: dict, err: Connect
     })
     step_record = {
         "step": ctx.step_idx,
+        "node_id": str(ctx.step_idx),
         "cmd": command,
         "args": args,
-        "result": message[:400],
+        "result": message,
         "ts": time.time(),
     }
     ctx.pipeline.react_trace.append(step_record)
     ctx.logger.append_react_step(step_record)
     return message
+
+
+def _update_plan_progress(pipeline_ctx: PipelineContext, tool_name: str, step_count: int) -> None:
+    """Mark the next incomplete plan step as done if the tool matches expected_tools."""
+    for entry in pipeline_ctx.plan_progress:
+        if entry["done"]:
+            continue
+        plan_step = next(
+            (s for s in pipeline_ctx.task_plan.steps if s.id == entry["step_id"]), None
+        )
+        if plan_step and tool_name in plan_step.expected_tools:
+            entry["done"] = True
+            entry["completed_at_react_step"] = step_count
+        break  # only check the next incomplete step
 
 
 def _record_file_use(ctx: AgentRuntimeContext, path: str) -> None:
@@ -118,10 +143,22 @@ def _record_file_use(ctx: AgentRuntimeContext, path: str) -> None:
 
 if function_tool is not None:
     @function_tool
-    def tree(wrapper: RunContextWrapper[AgentRuntimeContext], root: str = "") -> str:
-        req_args = {"root": root}
+    def context(wrapper: RunContextWrapper[AgentRuntimeContext]) -> str:
+        req_args = {}
         try:
-            resp = wrapper.context.vm.tree(TreeRequest(root=root))
+            resp = wrapper.context.vm.context(ContextRequest())
+            text = json.dumps(MessageToDict(resp), indent=2)
+            print(f"{CLI_GREEN}OUT{CLI_CLR}: {text}")
+            return _tool_result(wrapper.context, "context", req_args, text)
+        except ConnectError as err:
+            print(f"{CLI_RED}ERR {err.code}: {err.message}{CLI_CLR}")
+            return _tool_error(wrapper.context, "context", req_args, err)
+
+    @function_tool
+    def tree(wrapper: RunContextWrapper[AgentRuntimeContext], root: str = "", level: int = 2) -> str:
+        req_args = {"root": root, "level": level}
+        try:
+            resp = wrapper.context.vm.tree(TreeRequest(root=root, level=level))
             text = json.dumps(MessageToDict(resp), indent=2)
             print(f"{CLI_GREEN}OUT{CLI_CLR}: {text}")
             return _tool_result(wrapper.context, "tree", req_args, text)
@@ -173,10 +210,13 @@ if function_tool is not None:
             return _tool_error(wrapper.context, "list", req_args, err)
 
     @function_tool
-    def read(wrapper: RunContextWrapper[AgentRuntimeContext], path: str) -> str:
-        req_args = {"path": path}
+    def read(wrapper: RunContextWrapper[AgentRuntimeContext], path: str,
+             number: bool = False, start_line: int = 0, end_line: int = 0) -> str:
+        req_args = {"path": path, "number": number, "start_line": start_line, "end_line": end_line}
         try:
-            resp = wrapper.context.vm.read(ReadRequest(path=path))
+            resp = wrapper.context.vm.read(ReadRequest(
+                path=path, number=number, start_line=start_line, end_line=end_line,
+            ))
             text = resp.content
             _record_file_use(wrapper.context, path)
             print(f"{CLI_GREEN}OUT{CLI_CLR}: {text}")
@@ -186,10 +226,18 @@ if function_tool is not None:
             return _tool_error(wrapper.context, "read", req_args, err)
 
     @function_tool
-    def write(wrapper: RunContextWrapper[AgentRuntimeContext], path: str, content: str) -> str:
-        req_args = {"path": path, "content": content}
+    def write(wrapper: RunContextWrapper[AgentRuntimeContext], path: str, content: str,
+              start_line: int = 0, end_line: int = 0) -> str:
+        req_args = {"path": path, "content": content, "start_line": start_line, "end_line": end_line}
+        err = validate_or_error(wrapper.context, "write", req_args)
+        if err:
+            print(f"{CLI_RED}{err}{CLI_CLR}")
+            return err
         try:
-            resp = wrapper.context.vm.write(WriteRequest(path=path, content=content.rstrip("\n")))
+            resp = wrapper.context.vm.write(WriteRequest(
+                path=path, content=content.rstrip("\n"),
+                start_line=start_line, end_line=end_line,
+            ))
             text = json.dumps(MessageToDict(resp), indent=2)
             _record_file_use(wrapper.context, path)
             print(f"{CLI_GREEN}OUT{CLI_CLR}: {text}")
@@ -201,6 +249,10 @@ if function_tool is not None:
     @function_tool
     def delete(wrapper: RunContextWrapper[AgentRuntimeContext], path: str) -> str:
         req_args = {"path": path}
+        err = validate_or_error(wrapper.context, "delete", req_args)
+        if err:
+            print(f"{CLI_RED}{err}{CLI_CLR}")
+            return err
         try:
             resp = wrapper.context.vm.delete(DeleteRequest(path=path))
             text = json.dumps(MessageToDict(resp), indent=2)
@@ -265,6 +317,23 @@ if function_tool is not None:
             "completed_steps_laconic": completed_steps_laconic,
             "grounding_refs": grounding_refs,
         }
+        err = validate_or_error(wrapper.context, "report_completion", req_args)
+        if err:
+            print(f"{CLI_RED}{err}{CLI_CLR}")
+            return ReportTaskCompletion(
+                tool="report_completion",
+                completed_steps_laconic=completed_steps_laconic,
+                message=err,
+                grounding_refs=grounding_refs,
+                outcome="OUTCOME_ERR_INTERNAL",
+            )
+        req_args = {
+            "tool": "report_completion",
+            "message": message,
+            "outcome": outcome,
+            "completed_steps_laconic": completed_steps_laconic,
+            "grounding_refs": grounding_refs,
+        }
         completion = ReportTaskCompletion(
             tool="report_completion",
             completed_steps_laconic=completed_steps_laconic,
@@ -307,6 +376,18 @@ def _stop_on_report_completion(wrapper: Any, results: List[Any]) -> Any:
 
 
 class ReActLoopStage:
+    """ReAct execution loop using the OpenAI Agents SDK.
+
+    BP3 notes:
+    - Ephemeral validation feedback: validation errors returned from @function_tool
+      functions are prefixed with VALIDATION_PREFIX (see validator.py) to make them
+      identifiable in logs. The SDK manages message history internally and does not
+      expose it for stripping ephemeral turns, so full suppression is not possible.
+    - Message compression: not implemented for this pipeline. The openai-agents SDK
+      manages its own internal history and does not provide an API for compressing or
+      replacing individual message entries.
+    """
+
     def __init__(self, vm, model: str, prompt_manager: PromptManager):
         self._vm = vm
         self._model = model
@@ -317,22 +398,37 @@ class ReActLoopStage:
         prompt = build_initial_user_message(
             ctx.task, ctx.agents_md, ctx.agents_md_path, ctx.dfs_tree,
             ctx.preread_files, ctx.past_mistakes,
+            task_plan=ctx.task_plan,
+            context_blocks=ctx.context_blocks,
         )
 
+        max_steps = ctx.react_max_steps
         runtime = AgentRuntimeContext(vm=self._vm, pipeline=ctx, logger=logger, model=self._model)
         agent = Agent(
             name="Dev ReAct Agent",
             instructions=self._prompt_manager.get("system"),
             model=self._model,
-            tools=[tree, find, search, list, read, write, delete, mkdir, move, report_completion],
-            output_type=ReportTaskCompletion,
+            tools=[context, tree, find, search, list, read, write, delete, mkdir, move, report_completion],
             tool_use_behavior=_stop_on_report_completion,
         )
         try:
-            result = Runner.run_sync(agent, input=prompt, context=runtime, max_turns=MAX_STEPS)
+            result = Runner.run_sync(agent, input=prompt, context=runtime, max_turns=max_steps)
         except Exception as exc:
             print(f"{CLI_RED}ReAct stage failed: {exc}{CLI_CLR}")
             return
+
+        # ── BP4: Extract and log assistant reasoning (text message outputs) ──
+        if ItemHelpers is not None and MessageOutputItem is not None:
+            for item in getattr(result, 'new_items', []):
+                if isinstance(item, MessageOutputItem):
+                    text = ItemHelpers.text_message_output(item)
+                    if text.strip():
+                        logger.append_api_call({
+                            "stage": "react_reasoning",
+                            "ts": time.time(),
+                            "text": text,
+                            "type": "reasoning",
+                        })
 
         final_output = result.final_output
         if isinstance(final_output, ReportTaskCompletion):

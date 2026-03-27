@@ -1,6 +1,6 @@
 import hashlib
 from dataclasses import dataclass, field
-from typing import Any, List, Literal
+from typing import Any, List, Literal, Optional
 
 from pydantic import BaseModel, Field
 
@@ -17,6 +17,43 @@ class ReportTaskCompletion(BaseModel):
         "OUTCOME_NONE_UNSUPPORTED",
         "OUTCOME_ERR_INTERNAL",
     ]
+
+
+# ── Rules extraction (T2: context enhancement) ──────────────────────
+
+class RulesExtraction(BaseModel):
+    referenced_files: List[str] = Field(
+        default_factory=list,
+        description="File paths explicitly mentioned in agents.md that contain rules or templates",
+    )
+    key_rules: List[str] = Field(
+        default_factory=list,
+        description="3-7 most important rules extracted verbatim from agents.md",
+    )
+
+
+# ── Planning (T3: planning stage) ───────────────────────────────────
+
+class PlanStep(BaseModel):
+    id: str
+    description: str
+    rationale: str
+    expected_tools: List[str] = Field(default_factory=list)
+
+
+class TaskPlan(BaseModel):
+    task_interpretation: str
+    relevant_rules: List[str] = Field(default_factory=list)
+    steps: List[PlanStep]
+    complexity: Literal["simple", "medium", "complex"]
+    max_steps_estimate: int
+
+
+PLAN_SIZE_CONFIG = {
+    "simple":  {"min_steps": 1, "max_steps": 3,  "react_max_steps": 10},
+    "medium":  {"min_steps": 3, "max_steps": 6,  "react_max_steps": 20},
+    "complex": {"min_steps": 5, "max_steps": 10, "react_max_steps": 30},
+}
 
 
 class FileSuggestion(BaseModel):
@@ -46,6 +83,19 @@ class PipelineContext:
     final_code: str = ""
     verification_passed: bool = False
     verification_reason: str = ""
+
+    # T2: rules extraction
+    key_rules: list = field(default_factory=list)
+    rules_files: list = field(default_factory=list)
+    context_blocks: list = field(default_factory=list)  # Selected context blocks for this task
+
+    # T3: planning stage
+    task_plan: Optional["TaskPlan"] = None
+    plan_progress: list = field(default_factory=list)
+    react_max_steps: int = 30
+
+    # T5: action validator
+    validation_log: list = field(default_factory=list)
 
     @property
     def task_hash(self) -> str:

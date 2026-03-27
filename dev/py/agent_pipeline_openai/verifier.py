@@ -1,3 +1,6 @@
+import json
+import time
+
 from .models import VerificationResult
 from .prompt_manager import PromptManager
 
@@ -47,6 +50,16 @@ class VerifierStage:
             if isinstance(parsed, VerificationResult):
                 ctx.verification_passed = parsed.passed
                 ctx.verification_reason = parsed.reason
+                logger.append_react_step({
+                    "step": "verifier",
+                    "node_id": str(len(ctx.react_trace) + 1),
+                    "cmd": "verify_answer",
+                    "args": {"task": ctx.task[:200], "answer": ctx.final_answer},
+                    "result": json.dumps({"passed": parsed.passed, "reason": parsed.reason}),
+                    "type": "validator_step",
+                    "validation_passed": parsed.passed,
+                    "ts": time.time(),
+                })
             else:
                 ctx.verification_passed = True
                 ctx.verification_reason = "Verifier returned unexpected output type"

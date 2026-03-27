@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 from .logger import RunLogger
 
 from .context import ContextBuilderStage
+from .planning import PlanningStage
 from .models import PipelineContext
 from .prompt_manager import PromptManager
 from .react import ReActLoopStage
@@ -24,6 +25,10 @@ class Pipeline:
         self._stages.append(ContextBuilderStage(self._vm, self._model, self._prompt_manager))
         return self
 
+    def use_planning(self) -> "Pipeline":
+        self._stages.append(PlanningStage(self._model, self._prompt_manager))
+        return self
+
     def use_react(self) -> "Pipeline":
         self._stages.append(ReActLoopStage(self._vm, self._model, self._prompt_manager))
         return self
@@ -39,6 +44,7 @@ class Pipeline:
         logger.write_meta({
             "task_id": self._task_id,
             "model": self._model,
+            "task": self._task,
             "task_fragment": self._task[:200],
             "started_at": datetime.now(timezone.utc).isoformat(),
             "backend": "openai_agents",
@@ -57,6 +63,11 @@ class Pipeline:
             "step_count": len(ctx.react_trace),
             "finished_at": datetime.now(timezone.utc).isoformat(),
             "backend": "openai_agents",
+            "planning_enabled": ctx.task_plan is not None,
+            "plan_complexity": ctx.task_plan.complexity if ctx.task_plan else None,
+            "plan_steps_count": len(ctx.task_plan.steps) if ctx.task_plan else None,
+            "validation_rejections": len(ctx.validation_log),
         })
+        logger.write_trace()
 
         return ctx
