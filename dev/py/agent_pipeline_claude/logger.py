@@ -101,7 +101,7 @@ class RunLogger:
                 ],
             })
 
-        # Append validator steps from react_trace
+        # Append validator and reasoning steps from react_trace
         for s in react_steps:
             if s.get("type") == "validator_step":
                 trace.append({
@@ -113,6 +113,16 @@ class RunLogger:
                     "context": "Verifier",
                     "validation_passed": s.get("validation_passed", None),
                     "result": s.get("result", ""),
+                })
+            elif s.get("type") == "reasoning":
+                trace.append({
+                    "type": "reasoning",
+                    "node_id": s.get("node_id", ""),
+                    "parent_node_id": None,
+                    "depth": 0,
+                    "ts": s.get("ts", 0),
+                    "context": "ReActAgent",
+                    "text": s.get("text", ""),
                 })
 
         return {
