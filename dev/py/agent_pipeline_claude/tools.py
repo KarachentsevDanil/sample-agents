@@ -6,7 +6,6 @@ TOOLS = [
             "type": "object",
             "properties": {
                 "root": {"type": "string", "description": "tree root; empty string means repository root", "default": ""},
-                "level": {"type": "integer", "description": "max tree depth, 0 means unlimited", "default": 2},
             },
             "required": ["root"],
         },
@@ -54,9 +53,6 @@ TOOLS = [
             "type": "object",
             "properties": {
                 "path": {"type": "string"},
-                "number": {"type": "boolean", "description": "return 1-based line numbers", "default": False},
-                "start_line": {"type": "integer", "description": "1-based inclusive line number; 0 = from first line", "default": 0},
-                "end_line": {"type": "integer", "description": "1-based inclusive line number; 0 = through last line", "default": 0},
             },
             "required": ["path"],
         },
@@ -69,8 +65,6 @@ TOOLS = [
             "properties": {
                 "path": {"type": "string"},
                 "content": {"type": "string"},
-                "start_line": {"type": "integer", "description": "1-based inclusive line number; 0 keeps whole-file overwrite behavior", "default": 0},
-                "end_line": {"type": "integer", "description": "1-based inclusive line number; 0 means through the last line for ranged writes", "default": 0},
             },
             "required": ["path", "content"],
         },

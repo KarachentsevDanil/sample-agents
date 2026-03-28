@@ -155,10 +155,10 @@ if function_tool is not None:
             return _tool_error(wrapper.context, "context", req_args, err)
 
     @function_tool
-    def tree(wrapper: RunContextWrapper[AgentRuntimeContext], root: str = "", level: int = 2) -> str:
-        req_args = {"root": root, "level": level}
+    def tree(wrapper: RunContextWrapper[AgentRuntimeContext], root: str = "") -> str:
+        req_args = {"root": root}
         try:
-            resp = wrapper.context.vm.tree(TreeRequest(root=root, level=level))
+            resp = wrapper.context.vm.tree(TreeRequest(root=root))
             text = json.dumps(MessageToDict(resp), indent=2)
             print(f"{CLI_GREEN}OUT{CLI_CLR}: {text}")
             return _tool_result(wrapper.context, "tree", req_args, text)
@@ -210,12 +210,11 @@ if function_tool is not None:
             return _tool_error(wrapper.context, "list", req_args, err)
 
     @function_tool
-    def read(wrapper: RunContextWrapper[AgentRuntimeContext], path: str,
-             number: bool = False, start_line: int = 0, end_line: int = 0) -> str:
-        req_args = {"path": path, "number": number, "start_line": start_line, "end_line": end_line}
+    def read(wrapper: RunContextWrapper[AgentRuntimeContext], path: str) -> str:
+        req_args = {"path": path}
         try:
             resp = wrapper.context.vm.read(ReadRequest(
-                path=path, number=number, start_line=start_line, end_line=end_line,
+                path=path,
             ))
             text = resp.content
             _record_file_use(wrapper.context, path)
@@ -226,9 +225,8 @@ if function_tool is not None:
             return _tool_error(wrapper.context, "read", req_args, err)
 
     @function_tool
-    def write(wrapper: RunContextWrapper[AgentRuntimeContext], path: str, content: str,
-              start_line: int = 0, end_line: int = 0) -> str:
-        req_args = {"path": path, "content": content, "start_line": start_line, "end_line": end_line}
+    def write(wrapper: RunContextWrapper[AgentRuntimeContext], path: str, content: str) -> str:
+        req_args = {"path": path, "content": content}
         err = validate_or_error(wrapper.context, "write", req_args)
         if err:
             print(f"{CLI_RED}{err}{CLI_CLR}")
@@ -236,7 +234,6 @@ if function_tool is not None:
         try:
             resp = wrapper.context.vm.write(WriteRequest(
                 path=path, content=content.rstrip("\n"),
-                start_line=start_line, end_line=end_line,
             ))
             text = json.dumps(MessageToDict(resp), indent=2)
             _record_file_use(wrapper.context, path)

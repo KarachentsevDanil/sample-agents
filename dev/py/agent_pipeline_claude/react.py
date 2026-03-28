@@ -57,7 +57,6 @@ def _dispatch_tool(vm: PcmRuntimeClientSync, tool_name: str, tool_input: dict) -
         elif tool_name == "tree":
             return json.dumps(MessageToDict(vm.tree(TreeRequest(
                 root=tool_input.get("root", ""),
-                level=tool_input.get("level", 2),
             ))), indent=2)
         elif tool_name == "find":
             kind_map = {"all": 0, "files": 1, "dirs": 2}
@@ -78,16 +77,11 @@ def _dispatch_tool(vm: PcmRuntimeClientSync, tool_name: str, tool_input: dict) -
         elif tool_name == "read":
             return vm.read(ReadRequest(
                 path=tool_input["path"],
-                number=tool_input.get("number", False),
-                start_line=tool_input.get("start_line", 0),
-                end_line=tool_input.get("end_line", 0),
             )).content
         elif tool_name == "write":
             return json.dumps(MessageToDict(vm.write(WriteRequest(
                 path=tool_input["path"],
                 content=tool_input["content"].rstrip("\n"),
-                start_line=tool_input.get("start_line", 0),
-                end_line=tool_input.get("end_line", 0),
             ))), indent=2)
         elif tool_name == "delete":
             return json.dumps(MessageToDict(vm.delete(DeleteRequest(path=tool_input["path"]))), indent=2)
@@ -313,10 +307,12 @@ class ReActLoopStage:
             if not isinstance(content, list):
                 continue
             for block in content:
-                btype = block.type if hasattr(block, "type") else block.get("type")
-                bname = block.name if hasattr(block, "name") else block.get("name")
-                bid = block.id if hasattr(block, "id") else block.get("id")
-                if btype == "tool_use" and bname == "read" and bid:
+                btype = getattr(block, "type", None) or (block.get("type") if isinstance(block, dict) else None)
+                if btype != "tool_use":
+                    continue
+                bname = getattr(block, "name", None) or (block.get("name") if isinstance(block, dict) else None)
+                bid = getattr(block, "id", None) or (block.get("id") if isinstance(block, dict) else None)
+                if bname == "read" and bid:
                     read_ids.add(bid)
 
         # Walk messages in reverse to count consecutive trailing read-only user turns

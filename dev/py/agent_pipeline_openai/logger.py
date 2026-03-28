@@ -61,45 +61,44 @@ class RunLogger:
         if react_path.exists():
             react_steps = [json.loads(l) for l in react_path.read_text().splitlines() if l.strip()]
 
-        # Index react steps by node_id for fast lookup
-        steps_by_node = {}
-        for s in react_steps:
-            nid = s.get("node_id")
-            if nid:
-                steps_by_node.setdefault(nid, []).append(s)
-
         trace = []
 
-        # Build trace events from api_calls (LLM calls)
-        for call in api_calls:
-            node_id = call.get("node_id", str(call.get("step", 0)))
-            matched_steps = steps_by_node.get(node_id, [])
-
-            # Skip entries that are tool-level records (OpenAI pipeline writes
-            # tool results to api_calls.jsonl with a "cmd" field)
-            if "cmd" in call and "stage" not in call:
-                continue
-
+        # Build trace from react_steps (tool-call records with cmd/args/result)
+        for s in react_steps:
+            if s.get("type") in ("validator_step", "reasoning"):
+                continue  # handled below
             trace.append({
                 "type": "agent_step",
-                "node_id": node_id,
+                "node_id": s.get("node_id", str(s.get("step", 0))),
                 "parent_node_id": None,
                 "depth": 0,
-                "ts": call.get("ts", 0),
+                "ts": s.get("ts", 0),
                 "context": "ReActAgent",
-                "system_prompt": call.get("system", ""),
-                "messages": call.get("messages", []),
-                "thinking": call.get("thinking", ""),
+                "system_prompt": "",
+                "messages": [],
+                "thinking": "",
                 "output": {
                     "type": "tool_use",
-                    "tool_name": matched_steps[0]["cmd"] if matched_steps else None,
-                    "args": matched_steps[0].get("args") if matched_steps else None,
+                    "tool_name": s.get("cmd"),
+                    "args": s.get("args"),
                 },
                 "tool_calls": [
                     {"name": s["cmd"], "request": s.get("args", {}), "response": s.get("result", "")}
-                    for s in matched_steps if s.get("type") != "validator_step"
                 ],
             })
+
+        # Append reasoning from api_calls (react_reasoning entries from SDK)
+        for call in api_calls:
+            if call.get("stage") == "react_reasoning" and call.get("type") == "reasoning":
+                trace.append({
+                    "type": "reasoning",
+                    "node_id": call.get("node_id", ""),
+                    "parent_node_id": None,
+                    "depth": 0,
+                    "ts": call.get("ts", 0),
+                    "context": "ReActAgent",
+                    "text": call.get("text", ""),
+                })
 
         # Append validator and reasoning steps from react_trace
         for s in react_steps:
@@ -124,6 +123,9 @@ class RunLogger:
                     "context": "ReActAgent",
                     "text": s.get("text", ""),
                 })
+
+        # Sort by timestamp
+        trace.sort(key=lambda x: x.get("ts", 0))
 
         return {
             "meta": {**meta, "benchmark": self._benchmark, "session_id": self._session_id, "finished_at": self._finished_at},
