@@ -13,6 +13,7 @@ import time
 from .models import PipelineContext, TaskPlan, PLAN_SIZE_CONFIG
 from ._cli import CLI_GREEN, CLI_CLR
 from .prompt_manager import PromptManager
+from .usage import summarize_result_usage
 
 try:
     from agents import Agent, Runner
@@ -45,6 +46,7 @@ class PlanningStage:
                 "ts": time.time(),
                 "model": self._model,
                 "input_fragment": user_content[:200],
+                "usage": summarize_result_usage(result),
             })
 
             plan = result.final_output
@@ -74,10 +76,30 @@ class PlanningStage:
         parts = [f"Task: {ctx.task}"]
         if ctx.agents_md:
             parts.append(f"AGENTS.md summary:\n{ctx.agents_md[:2000]}")
-        if ctx.key_rules:
-            parts.append("Key rules:\n" + "\n".join(f"- {r}" for r in ctx.key_rules))
-        if ctx.preread_files:
-            parts.append("Pre-loaded files: " + ", ".join(ctx.preread_files.keys()))
+        if ctx.rule_graph_summary:
+            parts.append(f"Trusted rule graph:\n{ctx.rule_graph_summary}")
+        if ctx.task_relevant_rule_summaries:
+            parts.append(
+                "Task-relevant trusted rules:\n" +
+                "\n".join(f"- {r}" for r in ctx.task_relevant_rule_summaries)
+            )
+        if ctx.preloaded_context_files:
+            parts.append("Trusted pre-loaded rule files: " + ", ".join(ctx.preloaded_context_files.keys()))
+            for path, content in ctx.preloaded_context_files.items():
+                excerpt = content[:1200]
+                if len(content) > 1200:
+                    excerpt += "\n...[truncated]"
+                parts.append(f"--- {path} ---\n{excerpt}")
+        if ctx.untrusted_task_file_hints:
+            parts.append(
+                "Potential task data files (not authoritative):\n" +
+                "\n".join(f"- {p}" for p in ctx.untrusted_task_file_hints)
+            )
+        if ctx.rule_graph_injection_risk_notes:
+            parts.append(
+                "Prompt-injection boundary notes:\n" +
+                "\n".join(f"- {note}" for note in ctx.rule_graph_injection_risk_notes)
+            )
         if ctx.dfs_tree:
             parts.append(f"Filesystem tree:\n{ctx.dfs_tree}")
         if ctx.past_mistakes:

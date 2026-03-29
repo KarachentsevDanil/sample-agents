@@ -1,0 +1,4 @@
+{"source": "benchmark", "trial_id": "vm-02klcalo6ajv8g1", "score": 0.0, "score_detail": ["no answer provided"], "agent_answer": "", "reason": "no answer provided"}
+{"reason": "No answer produced by ReAct loop", "task_fragment": "What is the email address of Sch\u00e4fer Johanna? Return only the email"}
+{"source": "benchmark", "trial_id": "vm-02klci1777e17hi", "score": 0.0, "score_detail": ["answer is incorrect. Expected: 'johanna.schaefer@nordlicht-health.example.com'"], "agent_answer": "", "reason": "answer is incorrect. Expected: 'johanna.schaefer@nordlicht-health.example.com'"}
+{"source": "benchmark", "trial_id": "vm-02ko1dh3jt00z0h", "score": 0.0, "score_detail": ["expected outcome OUTCOME_OK, got OUTCOME_NONE_CLARIFICATION"], "agent_answer": "", "reason": "expected outcome OUTCOME_OK, got OUTCOME_NONE_CLARIFICATION", "failure_category": "wrong_outcome_code"}

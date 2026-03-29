@@ -27,6 +27,7 @@ from bitgn.harness_pb2 import (
 from bitgn.vm.pcm_connect import PcmRuntimeClientSync
 from bitgn.vm.pcm_pb2 import (
     AnswerRequest,
+    ContextRequest,
     DeleteRequest,
     FindRequest,
     ListRequest,
@@ -301,6 +302,36 @@ def active_trials_list():
 # ---------------------------------------------------------------------------
 # VM endpoints (PCM runtime)
 # ---------------------------------------------------------------------------
+
+@app.get("/vm/<trial_id>/context")
+def vm_context(trial_id):
+    """
+    Get runtime context for the trial (task instruction, metadata).
+    ---
+    tags: [vm]
+    parameters:
+      - name: trial_id
+        in: path
+        required: true
+        type: string
+    responses:
+      200:
+        description: Runtime context (task instruction, metadata)
+      404:
+        description: Trial not registered
+      502:
+        description: ConnectRPC error
+    """
+    try:
+        vm = _vm(trial_id)
+    except KeyError:
+        return _not_found(trial_id)
+    try:
+        resp = vm.context(ContextRequest())
+        return jsonify(_proto(resp))
+    except ConnectError as e:
+        return _connect_err(e)
+
 
 @app.get("/vm/<trial_id>/tree")
 def vm_tree(trial_id):

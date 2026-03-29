@@ -3,6 +3,7 @@ import time
 
 from .models import VerificationResult
 from .prompt_manager import PromptManager
+from .usage import summarize_result_usage
 
 try:
     from agents import Agent, Runner
@@ -38,14 +39,34 @@ class VerifierStage:
             model=self._model,
             output_type=VerificationResult,
         )
-        prompt = (
-            f"Task: {ctx.task}\n\n"
-            f"AGENTS.md instructions:\n{ctx.agents_md}\n\n"
-            f"Reasoning trace summary:\n{trace_summary}\n\n"
-            f"Final answer: {ctx.final_answer}\n"
-        )
+        prompt_parts = [
+            f"Task: {ctx.task}",
+            f"AGENTS.md instructions:\n{ctx.agents_md}",
+        ]
+        if ctx.rule_graph_summary:
+            prompt_parts.append(f"Trusted rule graph:\n{ctx.rule_graph_summary}")
+        if ctx.task_relevant_rule_summaries:
+            prompt_parts.append(
+                "Task-relevant trusted rules:\n" +
+                "\n".join(f"- {rule}" for rule in ctx.task_relevant_rule_summaries)
+            )
+        if ctx.preloaded_context_files:
+            for path, content in ctx.preloaded_context_files.items():
+                excerpt = content[:1200]
+                if len(content) > 1200:
+                    excerpt += "\n...[truncated]"
+                prompt_parts.append(f"Trusted rule file: {path}\n{excerpt}")
+        prompt_parts.append(f"Reasoning trace summary:\n{trace_summary}")
+        prompt_parts.append(f"Final answer: {ctx.final_answer}")
+        prompt = "\n\n".join(prompt_parts)
         try:
             result = Runner.run_sync(agent, input=prompt)
+            logger.append_api_call({
+                "stage": "verifier",
+                "ts": time.time(),
+                "model": self._model,
+                "usage": summarize_result_usage(result),
+            })
             parsed = result.final_output
             if isinstance(parsed, VerificationResult):
                 ctx.verification_passed = parsed.passed

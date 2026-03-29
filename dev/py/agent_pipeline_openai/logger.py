@@ -73,6 +73,7 @@ class RunLogger:
                 "parent_node_id": None,
                 "depth": 0,
                 "ts": s.get("ts", 0),
+                "step_duration_ms": s.get("step_duration_ms"),
                 "context": "ReActAgent",
                 "system_prompt": "",
                 "messages": [],
@@ -169,6 +170,24 @@ class RunLogger:
             f.write(json.dumps(record) + "\n")
 
 
+def _classify_failure(reason: str) -> str:
+    """Classify a benchmark failure reason into a category for pattern analysis."""
+    r = reason.lower()
+    if any(k in r for k in ("email", "calendar", "http", "salesforce", "slack", "webhook", "unsupported")):
+        return "capability_mismatch"
+    if any(k in r for k in ("no answer", "no answer provided", "empty answer")):
+        return "no_answer"
+    if any(k in r for k in ("expected outcome", "wrong outcome", "outcome_ok", "outcome_err")):
+        return "wrong_outcome_code"
+    if any(k in r for k in ("file", "delete", "write", "create", "not found", "unexpected")):
+        return "file_error"
+    if any(k in r for k in ("injection", "security", "denied", "override")):
+        return "security_bypass"
+    if any(k in r for k in ("incorrect", "wrong answer", "answer is wrong")):
+        return "data_error"
+    return "unknown"
+
+
 def log_benchmark_result(
     run_dir,
     task_id: str,
@@ -195,6 +214,7 @@ def log_benchmark_result(
             "score_detail": score_detail,
             "agent_answer": agent_answer,
             "reason": reason,
+            "failure_category": _classify_failure(reason),
         }
         mistakes_path.parent.mkdir(parents=True, exist_ok=True)
         existing = []

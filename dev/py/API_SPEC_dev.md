@@ -193,6 +193,23 @@ The dev (PCM) runtime exposes richer filesystem operations than the sandbox Mini
 
 ---
 
+#### `GET /vm/{trial_id}/context`
+
+**Purpose:** Get runtime context for the trial — task instruction, metadata, and other PCM-provided fields.
+
+**No query params.**
+
+**Response 200:**
+```json
+{
+  "instruction": "Full task instruction text",
+  "task_id": "t01",
+  "benchmark_id": "bitgn/pac1-dev"
+}
+```
+
+---
+
 #### `GET /vm/{trial_id}/tree`
 
 **Purpose:** Get recursive filesystem tree from a root path.
@@ -404,6 +421,19 @@ The dev (PCM) runtime exposes richer filesystem operations than the sandbox Mini
 
 ---
 
+### Client-side tools (no proxy endpoint)
+
+Two agent tools are implemented client-side and have no corresponding proxy endpoint — they call `/read` internally:
+
+| Tool | Behaviour |
+|------|-----------|
+| `exists(path)` | Calls `/read?path=`, returns `"EXISTS"` or `"NOT FOUND"` |
+| `peek(path, lines)` | Calls `/read?path=`, returns the first N lines of content |
+
+To test these manually, use `GET /vm/{trial_id}/read` directly.
+
+---
+
 ## Swagger UI
 
 Served at: `GET /docs`
@@ -432,6 +462,7 @@ Common cases:
 
 | Operation | Sandbox (Mini) | Dev (PCM) |
 |-----------|---------------|-----------|
+| Context / runtime info | — | `GET /context` |
 | Tree / outline | `GET /outline?path=` | `GET /tree?root=` |
 | Find by name | — | `GET /find?name=&kind=` |
 | List directory | `GET /list?path=` | `GET /list?path=` |
@@ -449,9 +480,21 @@ Common cases:
 
 ```
 dev/py/
-├── agent.py             # dev agent (PCM runtime, OpenAI structured output)
-├── main.py              # dev benchmark runner (bitgn/pac1-dev)
-├── app_dev.py           # Flask proxy (dev/pac-dev) — this server
-├── API_SPEC_dev.md      # this file
-└── pyproject.toml       # bitgn-pac1-py project (separate from sandbox)
+├── app_dev.py               # Flask proxy (dev/pac-dev) — this server
+├── API_SPEC_dev.md          # this file
+├── agent.py                 # simple dev agent (direct PCM, OpenAI structured output)
+├── main.py                  # simple benchmark runner
+├── main_pipeline.py         # pipeline-based benchmark runner
+├── agent_pipeline_openai/   # OpenAI Agents SDK pipeline
+│   ├── react.py             # ReAct loop + tool definitions (13 tools)
+│   ├── pipeline.py          # stage orchestration
+│   ├── context.py           # ContextBuilderStage (rule graph)
+│   ├── planning.py          # PlanningStage
+│   ├── verifier.py          # VerifierStage
+│   └── capability_check.py  # CapabilityCheckStage
+├── agent_pipeline_claude/   # Claude pipeline
+├── run_openai_dev.sh        # runner script (OpenAI pipeline)
+├── run_claude_dev.sh        # runner script (Claude pipeline)
+├── trace_viewer.html        # local trace viewer
+└── pyproject.toml           # bitgn-pac1-py project
 ```

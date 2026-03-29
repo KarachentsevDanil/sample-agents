@@ -1,0 +1,4 @@
+{"source": "benchmark", "trial_id": "vm-02klcau9zodhdbn", "score": 0.0, "score_detail": ["no answer provided"], "agent_answer": "", "reason": "no answer provided"}
+{"reason": "No answer produced by ReAct loop", "task_fragment": "process the inbox"}
+{"source": "benchmark", "trial_id": "vm-02kmrut7o091x8i", "score": 0.0, "score_detail": ["expected no changes, but got 4"], "agent_answer": "", "reason": "expected no changes, but got 4", "failure_category": "unknown"}
+{"source": "benchmark", "trial_id": "vm-02ko1id5hjxws5g", "score": 0.0, "score_detail": ["expected outcome OUTCOME_NONE_CLARIFICATION, got OUTCOME_OK"], "agent_answer": "", "reason": "expected outcome OUTCOME_NONE_CLARIFICATION, got OUTCOME_OK", "failure_category": "wrong_outcome_code"}
