@@ -149,7 +149,7 @@ class RunLogger:
 
     def _write_trace_html(self, trace_data: dict) -> None:
         """Generate self-contained trace.html with embedded trace data."""
-        template_path = Path(__file__).resolve().parent.parent / "trace_viewer.html"
+        template_path = Path(__file__).resolve().parent.parent.parent / "trace_viewer.html"
         if not template_path.exists():
             return
         template = template_path.read_text()

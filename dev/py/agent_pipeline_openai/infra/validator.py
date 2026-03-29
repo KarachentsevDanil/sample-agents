@@ -1,8 +1,8 @@
 """Pre-execution action validator (T5).
 
 Validates tool calls against a rule set *before* dispatch.
-Failures are logged to ctx.validation_log (not react_trace) and
-returned to the LLM as tool_result feedback so it can self-correct.
+Failures are logged to ctx.validation_log and returned to the LLM
+as tool_result feedback so it can self-correct.
 """
 
 from __future__ import annotations
@@ -11,7 +11,7 @@ import time
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from .models import AgentRuntimeContext
+    from ..models import AgentRuntimeContext
 
 VALID_OUTCOMES = {
     "OUTCOME_OK",
@@ -21,12 +21,11 @@ VALID_OUTCOMES = {
     "OUTCOME_ERR_INTERNAL",
 }
 
-# Each rule is (tool_input, pipeline_ctx) -> (passed: bool, reason: str)
 RULES: dict[str, list] = {
     "report_completion": [
         lambda args, ctx: (
             bool((args.get("message") or "").strip()),
-            "message is empty — re-read relevant files and provide a non-empty message",
+            "message is empty — provide a non-empty message",
         ),
         lambda args, ctx: (
             args.get("outcome", "OUTCOME_OK") in VALID_OUTCOMES,
@@ -72,11 +71,6 @@ class ActionValidator:
         return True, ""
 
 
-# BP3: Sentinel prefix for validation errors in the OpenAI SDK's internal history.
-# The openai-agents SDK manages message history internally and does not expose it
-# for stripping ephemeral turns. Prefixing validation errors at minimum makes them
-# identifiable in logs and distinguishable from real tool output.
-# Full ephemeral suppression (as done in the Claude pipeline) is not possible here.
 VALIDATION_PREFIX = "[VALIDATION_ERROR] "
 
 
@@ -85,10 +79,7 @@ def validate_or_error(
 ) -> str | None:
     """Helper for @function_tool functions.
 
-    Returns an error string if validation fails (caller should return it
-    immediately, skipping the VM call). Returns None if validation passes.
-    The error string is prefixed with VALIDATION_PREFIX so callers can
-    identify it in logs.
+    Returns an error string if validation fails, None if passes.
     """
     passed, reason = _VALIDATOR.validate(tool_name, tool_input, runtime_ctx)
     if not passed:

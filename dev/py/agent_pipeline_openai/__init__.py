@@ -26,5 +26,5 @@ def run_agent(model: str, harness_url: str, task_text: str,
         task_id=task_id,
         run_dir=run_dir,
     )
-    print(f"Verification: {ctx.verification_passed} — {ctx.verification_reason}")
+    print(f"Result: {ctx.final_code} — {ctx.final_answer[:120]}")
     return ctx.final_answer

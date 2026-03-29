@@ -10,10 +10,10 @@ from __future__ import annotations
 
 import time
 
-from .models import PipelineContext, TaskPlan, PLAN_SIZE_CONFIG
-from ._cli import CLI_GREEN, CLI_CLR
-from .prompt_manager import PromptManager
-from .usage import summarize_result_usage
+from ..models import PipelineContext, TaskPlan, PLAN_SIZE_CONFIG, budget_from_plan
+from ..infra._cli import CLI_GREEN, CLI_CLR
+from ..prompt_resources.prompt_manager import PromptManager
+from ..infra.usage import summarize_result_usage
 
 try:
     from agents import Agent, Runner
@@ -34,9 +34,13 @@ class PlanningStage:
 
         user_content = self._build_planning_input(ctx)
         try:
+            instructions = self._prompt_manager.get("planning")
+            print(f"[PLAN] Instructions:\n{instructions}")
+            print(f"[PLAN] Input:\n{user_content}")
+
             agent = Agent(
                 name="Task Planner",
-                instructions=self._prompt_manager.get("planning"),
+                instructions=instructions,
                 model=self._model,
                 output_type=TaskPlan,
             )
@@ -62,8 +66,7 @@ class PlanningStage:
                 for step in plan.steps
             ]
 
-            config = PLAN_SIZE_CONFIG.get(plan.complexity, PLAN_SIZE_CONFIG["complex"])
-            ctx.react_max_steps = config["react_max_steps"]
+            ctx.react_max_steps = budget_from_plan(len(plan.steps))
 
             self._print_plan(plan, ctx.react_max_steps)
 
@@ -75,31 +78,13 @@ class PlanningStage:
     def _build_planning_input(ctx: PipelineContext) -> str:
         parts = [f"Task: {ctx.task}"]
         if ctx.agents_md:
-            parts.append(f"AGENTS.md summary:\n{ctx.agents_md[:2000]}")
-        if ctx.rule_graph_summary:
-            parts.append(f"Trusted rule graph:\n{ctx.rule_graph_summary}")
-        if ctx.task_relevant_rule_summaries:
-            parts.append(
-                "Task-relevant trusted rules:\n" +
-                "\n".join(f"- {r}" for r in ctx.task_relevant_rule_summaries)
-            )
+            parts.append(f"AGENTS.md ({ctx.agents_md_path}):\n{ctx.agents_md}")
         if ctx.preloaded_context_files:
-            parts.append("Trusted pre-loaded rule files: " + ", ".join(ctx.preloaded_context_files.keys()))
             for path, content in ctx.preloaded_context_files.items():
                 excerpt = content[:1200]
                 if len(content) > 1200:
                     excerpt += "\n...[truncated]"
                 parts.append(f"--- {path} ---\n{excerpt}")
-        if ctx.untrusted_task_file_hints:
-            parts.append(
-                "Potential task data files (not authoritative):\n" +
-                "\n".join(f"- {p}" for p in ctx.untrusted_task_file_hints)
-            )
-        if ctx.rule_graph_injection_risk_notes:
-            parts.append(
-                "Prompt-injection boundary notes:\n" +
-                "\n".join(f"- {note}" for note in ctx.rule_graph_injection_risk_notes)
-            )
         if ctx.dfs_tree:
             parts.append(f"Filesystem tree:\n{ctx.dfs_tree}")
         if ctx.past_mistakes:
