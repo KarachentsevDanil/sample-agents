@@ -35,9 +35,9 @@ OUTCOME_BY_NAME = {
 }
 
 _STEP_BUDGET_WARNING = (
-    "\n\n⚠️ STEP BUDGET WARNING: You have used {used}/{max} steps. "
-    "You MUST call report_completion on your NEXT action. "
-    "Summarize what you've done and choose the correct OUTCOME code."
+    "\n\n** STEP BUDGET WARNING: You have used {used}/{max} steps. "
+    "You are approaching your step limit. Prioritize completing critical remaining "
+    "writes, then call report_completion. Choose the correct OUTCOME code."
 )
 
 TOOLS = [
@@ -68,7 +68,10 @@ TOOLS = [
     },
     {
         "name": "search",
-        "description": "Full-text search across files",
+        "description": (
+            "Full-text search across files. For structured JSON data, prefer "
+            "searching by ID fields (e.g., account_id, contact_id) rather than display names."
+        ),
         "input_schema": {
             "type": "object",
             "properties": {
@@ -163,7 +166,15 @@ TOOLS = [
         "input_schema": {
             "type": "object",
             "properties": {
-                "message": {"type": "string"},
+                "message": {
+                    "type": "string",
+                    "description": (
+                        "The answer to the task. If the task asks for a specific "
+                        "value (email, name, date) or says 'Return only X', this "
+                        "MUST be that literal value with no extra text. Otherwise, "
+                        "describe what you did."
+                    ),
+                },
                 "outcome": {
                     "type": "string",
                     "enum": [

@@ -16,9 +16,11 @@ from .react_tools import TOOL_SCHEMAS, dispatch_tool
 class ReActLoopStage:
     """ReAct execution loop using raw OpenAI chat completions with tool calls."""
 
-    def __init__(self, vm, model: str, prompt_manager: PromptManager, client: OpenAI):
+    def __init__(self, vm, model: str, reasoning: str | None,
+                 prompt_manager: PromptManager, client: OpenAI):
         self._vm = vm
         self._model = model
+        self._reasoning = reasoning
         self._prompt_manager = prompt_manager
         self._client = client
 
@@ -36,11 +38,14 @@ class ReActLoopStage:
 
         try:
             for _turn in range(max_steps):
-                response = self._client.chat.completions.create(
+                api_kwargs = dict(
                     model=self._model,
                     messages=messages,
                     tools=TOOL_SCHEMAS,
                 )
+                if self._reasoning:
+                    api_kwargs["reasoning_effort"] = self._reasoning
+                response = self._client.chat.completions.create(**api_kwargs)
                 _accumulate_usage(usage_totals, response)
 
                 choice = response.choices[0]

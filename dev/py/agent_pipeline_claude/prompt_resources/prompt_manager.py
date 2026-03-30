@@ -12,6 +12,8 @@ class PromptManager:
         with open(config_path) as f:
             cfg = yaml.safe_load(f)
         self._active: dict[str, str] = cfg["active"]
+        self._models: dict[str, str | None] = cfg.get("models") or {}
+        self._reasoning: dict[str, str | None] = cfg.get("reasoning") or {}
         self._cache: dict[str, dict] = {}
 
     def _load(self, name: str) -> dict:
@@ -30,6 +32,16 @@ class PromptManager:
         """Return {version, description, created} for the active prompt."""
         data = self._load(name)
         return {k: data[k] for k in ("version", "description", "created")}
+
+    def model_for(self, stage: str, fallback: str) -> str:
+        """Return the model for a pipeline stage, falling back to the default."""
+        override = self._models.get(stage)
+        return override if override else fallback
+
+    def reasoning_for(self, stage: str, fallback: str = "medium") -> str | None:
+        """Return the reasoning_effort for a stage. None = don't send the param."""
+        val = self._reasoning.get(stage)
+        return val if val else fallback
 
     def active_versions(self) -> dict[str, str]:
         """Return {prompt_name: version_string} for all active prompts."""

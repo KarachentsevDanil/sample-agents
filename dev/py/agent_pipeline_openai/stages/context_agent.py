@@ -112,9 +112,11 @@ def _dispatch_tool(name: str, arguments: dict, ctx: DiscoveryContext) -> str:
 class ContextDiscoveryAgent:
     """Discovers authority files by following refs from AGENTS.md."""
 
-    def __init__(self, vm, model: str, prompt_manager: PromptManager, client: OpenAI):
+    def __init__(self, vm, model: str, reasoning: str | None,
+                 prompt_manager: PromptManager, client: OpenAI):
         self._vm = vm
         self._model = model
+        self._reasoning = reasoning
         self._prompt_manager = prompt_manager
         self._client = client
 
@@ -152,11 +154,14 @@ class ContextDiscoveryAgent:
 
         try:
             for _turn in range(MAX_CONTEXT_READS):
-                response = self._client.chat.completions.create(
+                api_kwargs = dict(
                     model=self._model,
                     messages=messages,
                     tools=_TOOL_SCHEMAS,
                 )
+                if self._reasoning:
+                    api_kwargs["reasoning_effort"] = self._reasoning
+                response = self._client.chat.completions.create(**api_kwargs)
                 _accumulate_usage(usage_totals, response)
 
                 choice = response.choices[0]

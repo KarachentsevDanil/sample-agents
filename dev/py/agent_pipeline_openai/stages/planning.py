@@ -18,8 +18,10 @@ from ..prompt_resources.prompt_manager import PromptManager
 
 
 class PlanningStage:
-    def __init__(self, model: str, prompt_manager: PromptManager, client: OpenAI):
+    def __init__(self, model: str, reasoning: str | None,
+                 prompt_manager: PromptManager, client: OpenAI):
         self._model = model
+        self._reasoning = reasoning
         self._prompt_manager = prompt_manager
         self._client = client
 
@@ -27,7 +29,7 @@ class PlanningStage:
         user_content = self._build_planning_input(ctx)
         try:
             instructions = self._prompt_manager.get("planning")
-            response = self._client.beta.chat.completions.parse(
+            api_kwargs = dict(
                 model=self._model,
                 messages=[
                     {"role": "system", "content": instructions},
@@ -35,6 +37,9 @@ class PlanningStage:
                 ],
                 response_format=TaskPlan,
             )
+            if self._reasoning:
+                api_kwargs["reasoning_effort"] = self._reasoning
+            response = self._client.beta.chat.completions.parse(**api_kwargs)
 
             usage = response.usage
             logger.append_api_call({
@@ -73,6 +78,8 @@ class PlanningStage:
     @staticmethod
     def _build_planning_input(ctx: PipelineContext) -> str:
         parts = [f"Task: {ctx.task}"]
+        if ctx.vm_time:
+            parts.append(f"Current VM time (use as 'today' for relative dates): {ctx.vm_time}")
         if ctx.agents_md:
             parts.append(f"AGENTS.md ({ctx.agents_md_path}):\n{ctx.agents_md}")
         if ctx.preloaded_context_files:
@@ -83,10 +90,22 @@ class PlanningStage:
                 parts.append(f"--- {path} ---\n{excerpt}")
         if ctx.dfs_tree:
             parts.append(f"Filesystem tree:\n{ctx.dfs_tree}")
+        if ctx.injection_risk_notes:
+            parts.append(f"[SECURITY_ALERT] Context assessment flagged:\n{ctx.injection_risk_notes}")
         if ctx.past_mistakes:
-            parts.append("Past mistakes on this task:\n" + "\n".join(
-                f"- {m.get('reason', '?')}" for m in ctx.past_mistakes[:3]
-            ))
+            # Escalate security-related mistakes to top
+            security_mistakes = [m for m in ctx.past_mistakes[:3]
+                                 if "DENIED_SECURITY" in str(m.get("score_detail", []))]
+            other_mistakes = [m for m in ctx.past_mistakes[:3]
+                              if "DENIED_SECURITY" not in str(m.get("score_detail", []))]
+            lines = []
+            for m in security_mistakes:
+                detail = m.get("score_detail", [])
+                lines.append(f"- [SECURITY] {'; '.join(str(d) for d in detail[:3])}")
+            for m in other_mistakes:
+                reason = m.get("reason", "?")
+                lines.append(f"- {reason}")
+            parts.append("Past mistakes on this task:\n" + "\n".join(lines))
         return "\n\n".join(parts)
 
     @staticmethod

@@ -1,6 +1,20 @@
 active:
-  system: v9
+  system: v10
   context: v2
   context_agent: v1
-  planning: v1
+  planning: v2
   rules_extraction: v1
+
+# Per-stage model overrides. Null = fall back to pipeline default.
+models:
+  context_agent: null
+  context: null
+  planning: null
+  react: null
+
+# Per-stage reasoning effort (logged only — Anthropic API uses extended thinking).
+reasoning:
+  context_agent: medium
+  context: medium
+  planning: high
+  react: medium

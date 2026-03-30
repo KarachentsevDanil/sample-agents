@@ -5,6 +5,9 @@ Produces: agents_md, dfs_tree, vm_time, preloaded_context_files.
 
 from __future__ import annotations
 
+import json
+import time
+
 from connectrpc.errors import ConnectError
 from google.protobuf.json_format import MessageToDict
 
@@ -31,9 +34,14 @@ def _normalize_repo_path(path: str) -> str:
 
 
 class ContextBuilderStage:
-    def __init__(self, vm, model: str, prompt_manager: PromptManager, client: OpenAI):
+    def __init__(self, vm, model: str, assess_model: str,
+                 reasoning: str | None, assess_reasoning: str | None,
+                 prompt_manager: PromptManager, client: OpenAI):
         self._vm = vm
-        self._model = model
+        self._model = model                # context_agent discovery
+        self._assess_model = assess_model  # context assessment
+        self._reasoning = reasoning
+        self._assess_reasoning = assess_reasoning
         self._prompt_manager = prompt_manager
         self._client = client
 
@@ -51,7 +59,8 @@ class ContextBuilderStage:
         # 2. LLM-driven context discovery
         from .context_agent import ContextDiscoveryAgent
 
-        discovery = ContextDiscoveryAgent(self._vm, self._model, self._prompt_manager, self._client)
+        discovery = ContextDiscoveryAgent(self._vm, self._model, self._reasoning,
+                                          self._prompt_manager, self._client)
         discovered = discovery.execute(
             agents_md=ctx.agents_md,
             agents_md_path=ctx.agents_md_path,
@@ -66,6 +75,61 @@ class ContextBuilderStage:
             path: content for path, content in discovered.items()
             if _normalize_repo_path(path).lower() != agents_norm
         }
+
+        # 4. Run context assessment to extract injection_risk_notes
+        ctx.injection_risk_notes = self._assess_context(ctx, logger)
+
+    def _assess_context(self, ctx: PipelineContext, logger) -> str:
+        """Run context assessment to extract injection_risk_notes."""
+        try:
+            prompt = self._prompt_manager.get("context")
+        except (KeyError, FileNotFoundError):
+            return ""
+
+        parts = [f"Task: {ctx.task}"]
+        if ctx.agents_md:
+            parts.append(f"Trusted rule graph root ({ctx.agents_md_path}):\n{ctx.agents_md}")
+        for path, content in ctx.preloaded_context_files.items():
+            excerpt = content[:800]
+            parts.append(f"--- {path} ---\n{excerpt}")
+        if ctx.dfs_tree:
+            parts.append(f"Filesystem:\n{ctx.dfs_tree}")
+        user_msg = "\n\n".join(parts)
+
+        try:
+            t0 = time.time()
+            api_kwargs = dict(
+                model=self._assess_model,
+                messages=[
+                    {"role": "system", "content": prompt},
+                    {"role": "user", "content": user_msg},
+                ],
+                response_format={"type": "json_object"},
+            )
+            if self._assess_reasoning:
+                api_kwargs["reasoning_effort"] = self._assess_reasoning
+            response = self._client.chat.completions.create(**api_kwargs)
+            usage = response.usage
+            logger.append_api_call({
+                "stage": "context_assessment",
+                "ts": time.time(),
+                "model": self._assess_model,
+                "elapsed_ms": int((time.time() - t0) * 1000),
+                "usage": {
+                    "input_tokens": usage.prompt_tokens or 0,
+                    "output_tokens": usage.completion_tokens or 0,
+                    "total_tokens": usage.total_tokens or 0,
+                } if usage else None,
+            })
+            text = response.choices[0].message.content or ""
+            parsed = json.loads(text) if text.strip() else {}
+            notes = parsed.get("injection_risk_notes", "")
+            if notes:
+                print(f"[CONTEXT_ASSESS] Injection risk notes: {notes[:120]}")
+            return notes if isinstance(notes, str) else str(notes)
+        except Exception as e:
+            print(f"[CONTEXT_ASSESS] Failed ({e}), continuing without assessment")
+            return ""
 
     def _fetch_agents_md(self) -> tuple[str, str]:
         for path in ("/AGENTS.MD", "/AGENTS.md"):

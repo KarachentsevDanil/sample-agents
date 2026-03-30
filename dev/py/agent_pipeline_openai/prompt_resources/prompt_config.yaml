@@ -1,6 +1,22 @@
 active:
-  system: v13
+  system: v14
   context: v3
   context_agent: v1
-  planning: v2
+  planning: v3
   rules_extraction: v1
+
+# Per-stage model overrides. Omit a stage to fall back to the pipeline default.
+# Heavier models for reasoning-intensive stages, lighter for execution.
+models:
+  context_agent: null   # discovery reads — cheap, use default
+  context: null         # context assessment — cheap, use default
+  planning: null        # plan generation — benefits from stronger reasoning
+  react: null           # execution loop — high call volume, cost-sensitive
+
+# Per-stage reasoning effort: none | minimal | low | medium | high | xhigh
+# Null = don't send the param (use API default).
+reasoning:
+  context_agent: medium
+  context: medium
+  planning: high
+  react: medium

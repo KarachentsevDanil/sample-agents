@@ -34,6 +34,12 @@ class TaskPlan(BaseModel):
     steps: List[PlanStep]
     complexity: Literal["simple", "medium", "complex"]
     max_steps_estimate: int
+    early_outcome: Optional[Literal[
+        "OUTCOME_NONE_UNSUPPORTED",
+        "OUTCOME_NONE_CLARIFICATION",
+        "OUTCOME_DENIED_SECURITY",
+    ]] = None
+    early_outcome_reason: Optional[str] = None
 
 
 PLAN_SIZE_CONFIG = {
@@ -42,9 +48,9 @@ PLAN_SIZE_CONFIG = {
     "complex": {"min_steps": 5, "max_steps": 8,  "react_max_steps": 18},
 }
 
-# Budget from plan length: plan_steps * 2 + 2, capped at 18
+# Budget from plan length: plan_steps * 2.5 + 3, capped at 20
 def budget_from_plan(plan_steps: int) -> int:
-    return min(plan_steps * 2 + 2, 18)
+    return min(int(plan_steps * 2.5 + 3), 20)
 
 
 @dataclass
@@ -61,6 +67,7 @@ class PipelineContext:
     final_answer: str = ""
     final_code: str = ""
     vm_time: str = ""
+    injection_risk_notes: str = ""
 
     # T3: planning stage
     task_plan: Optional["TaskPlan"] = None

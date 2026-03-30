@@ -36,8 +36,8 @@ OUTCOME_BY_NAME = {
 
 _STEP_BUDGET_WARNING = (
     "\n\n** STEP BUDGET WARNING: You have used {used}/{max} steps. "
-    "You MUST call done() on your NEXT action. "
-    "Summarize what you've done and choose the correct OUTCOME code."
+    "You are approaching your step limit. Prioritize completing critical remaining "
+    "writes, then call done(). Choose the correct OUTCOME code."
 )
 
 
@@ -419,7 +419,11 @@ TOOL_SCHEMAS = [
         "type": "function",
         "function": {
             "name": "search",
-            "description": "Search file contents using a regex or substring pattern.",
+            "description": (
+                "Search file contents using a regex or substring pattern. "
+                "For structured JSON data, prefer searching by ID fields "
+                "(e.g., account_id, contact_id) rather than display names."
+            ),
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -498,7 +502,12 @@ TOOL_SCHEMAS = [
                 "properties": {
                     "message": {
                         "type": "string",
-                        "description": "What you did or why you can't. Be specific.",
+                        "description": (
+                            "The answer to the task. If the task asks for a specific "
+                            "value (email, name, date) or says 'Return only X', this "
+                            "MUST be that literal value with no extra text. Otherwise, "
+                            "describe what you did."
+                        ),
                     },
                     "outcome": {
                         "type": "string",
