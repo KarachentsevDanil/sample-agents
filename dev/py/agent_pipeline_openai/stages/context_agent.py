@@ -19,6 +19,7 @@ from openai import OpenAI
 from bitgn.vm.pcm_pb2 import ReadRequest
 
 from ..infra._cli import CLI_GREEN, CLI_CLR
+from ..infra.reasoning import supports_reasoning
 from ..prompt_resources.prompt_manager import PromptManager
 
 MAX_CONTEXT_READS = 12
@@ -159,7 +160,7 @@ class ContextDiscoveryAgent:
                     messages=messages,
                     tools=_TOOL_SCHEMAS,
                 )
-                if self._reasoning:
+                if self._reasoning and supports_reasoning(self._model):
                     api_kwargs["reasoning_effort"] = self._reasoning
                 response = self._client.chat.completions.create(**api_kwargs)
                 _accumulate_usage(usage_totals, response)

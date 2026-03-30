@@ -15,6 +15,7 @@ from bitgn.vm.pcm_pb2 import ContextRequest, ReadRequest, TreeRequest
 
 from openai import OpenAI
 
+from ..infra.reasoning import supports_reasoning
 from ..models import PipelineContext
 from ..prompt_resources.prompt_manager import PromptManager
 
@@ -101,12 +102,12 @@ class ContextBuilderStage:
             api_kwargs = dict(
                 model=self._assess_model,
                 messages=[
-                    {"role": "system", "content": prompt},
+                    {"role": "system", "content": prompt + "\n\nRespond with a JSON object."},
                     {"role": "user", "content": user_msg},
                 ],
                 response_format={"type": "json_object"},
             )
-            if self._assess_reasoning:
+            if self._assess_reasoning and supports_reasoning(self._assess_model):
                 api_kwargs["reasoning_effort"] = self._assess_reasoning
             response = self._client.chat.completions.create(**api_kwargs)
             usage = response.usage

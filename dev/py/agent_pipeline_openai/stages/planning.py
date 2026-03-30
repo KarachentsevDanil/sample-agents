@@ -14,6 +14,7 @@ from openai import OpenAI
 
 from ..models import PipelineContext, TaskPlan, PLAN_SIZE_CONFIG, budget_from_plan
 from ..infra._cli import CLI_GREEN, CLI_CLR
+from ..infra.reasoning import supports_reasoning
 from ..prompt_resources.prompt_manager import PromptManager
 
 
@@ -37,7 +38,7 @@ class PlanningStage:
                 ],
                 response_format=TaskPlan,
             )
-            if self._reasoning:
+            if self._reasoning and supports_reasoning(self._model):
                 api_kwargs["reasoning_effort"] = self._reasoning
             response = self._client.beta.chat.completions.parse(**api_kwargs)
 

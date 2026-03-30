@@ -6,6 +6,7 @@ import time
 from openai import OpenAI
 
 from ..infra._cli import CLI_RED, CLI_GREEN, CLI_CLR
+from ..infra.reasoning import supports_reasoning
 from ..models import AgentRuntimeContext, PipelineContext
 from ..prompt_resources.prompt_manager import PromptManager
 from ..prompt_resources.prompts import build_initial_user_message
@@ -43,7 +44,7 @@ class ReActLoopStage:
                     messages=messages,
                     tools=TOOL_SCHEMAS,
                 )
-                if self._reasoning:
+                if self._reasoning and supports_reasoning(self._model):
                     api_kwargs["reasoning_effort"] = self._reasoning
                 response = self._client.chat.completions.create(**api_kwargs)
                 _accumulate_usage(usage_totals, response)
