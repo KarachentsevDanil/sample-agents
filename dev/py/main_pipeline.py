@@ -22,10 +22,13 @@ CLI_RED = "\x1B[31m"
 CLI_GREEN = "\x1B[32m"
 CLI_CLR = "\x1B[0m"
 
-_OPENAI_MODEL_PRICING = {
+_MODEL_PRICING = {
     "gpt-5.4": {"input": 2.50, "cached_input": 0.25, "output": 15.00},
     "gpt-5.4-mini": {"input": 0.750, "cached_input": 0.075, "output": 4.500},
     "gpt-5.4-nano": {"input": 0.20, "cached_input": 0.02, "output": 1.25},
+    "claude-opus-4-6": {"input": 15.00, "cached_input": 1.50, "output": 75.00},
+    "claude-sonnet-4-6": {"input": 3.00, "cached_input": 0.30, "output": 15.00},
+    "claude-haiku-4-5": {"input": 0.80, "cached_input": 0.08, "output": 4.00},
 }
 
 
@@ -66,9 +69,9 @@ def _format_price(price: float | None) -> str:
 
 def _lookup_model_pricing(model_id: str) -> dict | None:
     lowered = model_id.strip().lower()
-    for prefix in ("gpt-5.4-nano", "gpt-5.4-mini", "gpt-5.4"):
+    for prefix in _MODEL_PRICING:
         if lowered.startswith(prefix):
-            return _OPENAI_MODEL_PRICING[prefix]
+            return _MODEL_PRICING[prefix]
     return None
 
 
@@ -81,6 +84,7 @@ def _calculate_price(model_id: str, usage: dict | None) -> float | None:
 
     input_tokens = int(usage.get("input_tokens", 0) or 0)
     cached_input_tokens = int(usage.get("cached_input_tokens", 0) or 0)
+    cached_input_tokens += int(usage.get("cache_read_input_tokens", 0) or 0)
     output_tokens = int(usage.get("output_tokens", 0) or 0)
     uncached_input_tokens = max(0, input_tokens - cached_input_tokens)
 

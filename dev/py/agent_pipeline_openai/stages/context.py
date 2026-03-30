@@ -10,6 +10,8 @@ from google.protobuf.json_format import MessageToDict
 
 from bitgn.vm.pcm_pb2 import ContextRequest, ReadRequest, TreeRequest
 
+from openai import OpenAI
+
 from ..models import PipelineContext
 from ..prompt_resources.prompt_manager import PromptManager
 
@@ -29,10 +31,11 @@ def _normalize_repo_path(path: str) -> str:
 
 
 class ContextBuilderStage:
-    def __init__(self, vm, model: str, prompt_manager: PromptManager):
+    def __init__(self, vm, model: str, prompt_manager: PromptManager, client: OpenAI):
         self._vm = vm
         self._model = model
         self._prompt_manager = prompt_manager
+        self._client = client
 
     def execute(self, ctx: PipelineContext, logger) -> None:
         # 1. Fetch fundamentals
@@ -48,7 +51,7 @@ class ContextBuilderStage:
         # 2. LLM-driven context discovery
         from .context_agent import ContextDiscoveryAgent
 
-        discovery = ContextDiscoveryAgent(self._vm, self._model, self._prompt_manager)
+        discovery = ContextDiscoveryAgent(self._vm, self._model, self._prompt_manager, self._client)
         discovered = discovery.execute(
             agents_md=ctx.agents_md,
             agents_md_path=ctx.agents_md_path,

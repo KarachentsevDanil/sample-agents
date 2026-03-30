@@ -26,12 +26,6 @@ from ..infra._cli import CLI_RED, CLI_GREEN, CLI_CLR
 from ..models import AgentRuntimeContext, PipelineContext
 from ..infra.validator import validate_or_error
 
-try:
-    from agents import RunContextWrapper, function_tool
-except ImportError:
-    RunContextWrapper = Any
-    function_tool = None
-
 OUTCOME_BY_NAME = {
     "OUTCOME_OK": Outcome.OUTCOME_OK,
     "OUTCOME_DENIED_SECURITY": Outcome.OUTCOME_DENIED_SECURITY,
@@ -213,207 +207,336 @@ def _record_file_use(ctx: AgentRuntimeContext, path: str) -> None:
         ctx.pipeline.files_used.append(path)
 
 
-# ── 7 Tools ────────────────────────────────────────────────────────
+# ── 7 Tools (plain functions) ────────────────────────────────────
 
-if function_tool is not None:
 
-    @function_tool
-    def read_file(wrapper: RunContextWrapper[AgentRuntimeContext], path: str) -> str:
-        """Read a file. Returns file content, or 'NOT_FOUND' if the file doesn't exist.
+def read_file(ctx: AgentRuntimeContext, path: str) -> str:
+    """Read a file. Returns file content, or 'NOT_FOUND' if the file doesn't exist."""
+    req_args = {"path": path}
+    try:
+        resp = ctx.vm.read(ReadRequest(path=path))
+        text = resp.content
+        _record_file_use(ctx, path)
+        return _tool_result(ctx, "read_file", req_args, text)
+    except ConnectError:
+        return _tool_result(ctx, "read_file", req_args, "NOT_FOUND")
 
-        Use this instead of browse() when you know the exact file path.
-        Do NOT re-read files already shown in your context under [TRUSTED RULE] sections.
 
-        Args:
-            path: File path to read
-        """
-        req_args = {"path": path}
-        try:
-            resp = wrapper.context.vm.read(ReadRequest(path=path))
-            text = resp.content
-            _record_file_use(wrapper.context, path)
-            return _tool_result(wrapper.context, "read_file", req_args, text)
-        except ConnectError:
-            return _tool_result(wrapper.context, "read_file", req_args, "NOT_FOUND")
-
-    @function_tool
-    def browse(
-        wrapper: RunContextWrapper[AgentRuntimeContext],
-        path: str = "/",
-        mode: str = "tree",
-        name: str = "",
-    ) -> str:
-        """Browse the filesystem.
-
-        Args:
-            path: Directory to browse (default: "/")
-            mode: "tree" (recursive), "ls" (direct children), "find" (search by filename)
-            name: Filename pattern for mode="find" (e.g. "*.md", "SR-13.json")
-        """
-        req_args = {"path": path, "mode": mode, "name": name}
-        try:
-            if mode == "tree":
-                resp = wrapper.context.vm.tree(TreeRequest(root=path))
-                text = json.dumps(MessageToDict(resp), indent=2)
-            elif mode == "ls":
-                resp = wrapper.context.vm.list(ListRequest(name=path))
-                text = json.dumps(MessageToDict(resp), indent=2)
-            elif mode == "find":
-                resp = wrapper.context.vm.find(FindRequest(
-                    name=name, root=path, type=0, limit=10,
-                ))
-                text = json.dumps(MessageToDict(resp), indent=2)
-            else:
-                text = f"ERROR: Unknown mode '{mode}'. Use 'tree', 'ls', or 'find'."
-            return _tool_result(wrapper.context, "browse", req_args, text)
-        except ConnectError as err:
-            return _tool_error(wrapper.context, "browse", req_args, err)
-
-    @function_tool
-    def search(
-        wrapper: RunContextWrapper[AgentRuntimeContext],
-        pattern: str,
-        root: str = "/",
-        limit: int = 10,
-    ) -> str:
-        """Search file contents using a regex or substring pattern.
-
-        Args:
-            pattern: Regex or substring to search for inside file contents
-            root: Directory to search under (default: "/")
-            limit: Maximum number of matching files to return
-        """
-        req_args = {"pattern": pattern, "root": root, "limit": limit}
-        try:
-            resp = wrapper.context.vm.search(SearchRequest(root=root, pattern=pattern, limit=limit))
+def browse(
+    ctx: AgentRuntimeContext,
+    path: str = "/",
+    mode: str = "tree",
+    name: str = "",
+) -> str:
+    """Browse the filesystem."""
+    req_args = {"path": path, "mode": mode, "name": name}
+    try:
+        if mode == "tree":
+            resp = ctx.vm.tree(TreeRequest(root=path))
             text = json.dumps(MessageToDict(resp), indent=2)
-            return _tool_result(wrapper.context, "search", req_args, text)
-        except ConnectError as err:
-            return _tool_error(wrapper.context, "search", req_args, err)
-
-    @function_tool
-    def write_file(wrapper: RunContextWrapper[AgentRuntimeContext], path: str, content: str) -> str:
-        """Write content to a file. Creates parent directories if needed.
-        Returns verified content length on success, or an error message.
-
-        Args:
-            path: File path to write to
-            content: Full file content to write
-        """
-        req_args = {"path": path, "content": content}
-        err = validate_or_error(wrapper.context, "write", req_args)
-        if err:
-            print(f"{CLI_RED}{err}{CLI_CLR}")
-            return err
-
-        # Template protection guard
-        filename = path.split("/")[-1].lower()
-        if filename.startswith("_") or "template" in filename:
-            error_msg = f"ERROR: Cannot write to template/scaffolding file: {path}"
-            return _tool_result(wrapper.context, "write_file", req_args, error_msg)
-
-        # Auto-mkdir parent
-        parent = str(PurePosixPath(path).parent)
-        if parent and parent != "/" and parent != ".":
-            try:
-                wrapper.context.vm.mk_dir(MkDirRequest(path=parent))
-            except ConnectError:
-                pass
-
-        try:
-            wrapper.context.vm.write(WriteRequest(path=path, content=content.rstrip("\n")))
-            # Auto-verify by reading back
-            verify = wrapper.context.vm.read(ReadRequest(path=path))
-            _record_file_use(wrapper.context, path)
-            result = f"OK. Verified content ({len(verify.content)} chars)"
-            return _tool_result(wrapper.context, "write_file", req_args, result)
-        except ConnectError as err:
-            return _tool_error(wrapper.context, "write_file", req_args, err)
-
-    @function_tool
-    def delete_file(wrapper: RunContextWrapper[AgentRuntimeContext], path: str) -> str:
-        """Delete a file or directory.
-
-        Args:
-            path: File or directory path to delete
-        """
-        req_args = {"path": path}
-        err = validate_or_error(wrapper.context, "delete", req_args)
-        if err:
-            print(f"{CLI_RED}{err}{CLI_CLR}")
-            return err
-
-        # Template protection guard
-        filename = path.split("/")[-1].lower()
-        if filename.startswith("_") or "template" in filename:
-            error_msg = f"ERROR: Cannot delete template/scaffolding file: {path}"
-            return _tool_result(wrapper.context, "delete_file", req_args, error_msg)
-
-        try:
-            wrapper.context.vm.delete(DeleteRequest(path=path))
-            return _tool_result(wrapper.context, "delete_file", req_args, "DELETED")
-        except ConnectError as err:
-            return _tool_error(wrapper.context, "delete_file", req_args, err)
-
-    @function_tool
-    def move_file(wrapper: RunContextWrapper[AgentRuntimeContext], from_path: str, to_path: str) -> str:
-        """Move or rename a file.
-
-        Args:
-            from_path: Current file path
-            to_path: New file path
-        """
-        req_args = {"from_path": from_path, "to_path": to_path}
-        try:
-            resp = wrapper.context.vm.move(MoveRequest(from_name=from_path, to_name=to_path))
+        elif mode == "ls":
+            resp = ctx.vm.list(ListRequest(name=path))
             text = json.dumps(MessageToDict(resp), indent=2)
-            return _tool_result(wrapper.context, "move_file", req_args, text)
-        except ConnectError as err:
-            return _tool_error(wrapper.context, "move_file", req_args, err)
-
-    @function_tool
-    def done(
-        wrapper: RunContextWrapper[AgentRuntimeContext],
-        message: str,
-        outcome: str,
-        refs: List[str] | None = None,
-    ) -> str:
-        """Submit final answer. Must be called exactly once.
-
-        Args:
-            message: What you did or why you can't. Be specific.
-            outcome: OUTCOME_OK, OUTCOME_DENIED_SECURITY, OUTCOME_NONE_CLARIFICATION,
-                     OUTCOME_NONE_UNSUPPORTED, or OUTCOME_ERR_INTERNAL
-            refs: Files you read/wrote/deleted (no leading /)
-        """
-        refs = refs or []
-        refs = [ref.lstrip("/") for ref in refs if isinstance(ref, str)]
-        outcome_proto = OUTCOME_BY_NAME.get(outcome, Outcome.OUTCOME_OK)
-        req_args = {
-            "tool": "done",
-            "message": message,
-            "outcome": outcome,
-            "refs": refs,
-        }
-        err = validate_or_error(wrapper.context, "report_completion", req_args)
-        if err:
-            print(f"{CLI_RED}{err}{CLI_CLR}")
-            return err
-        try:
-            wrapper.context.vm.answer(AnswerRequest(
-                message=message, outcome=outcome_proto, refs=refs
+        elif mode == "find":
+            resp = ctx.vm.find(FindRequest(
+                name=name, root=path, type=0, limit=10,
             ))
-            wrapper.context.pipeline.final_answer = message
-            wrapper.context.pipeline.final_code = outcome
-            wrapper.context.pipeline.harness_answer_submitted = True
-            wrapper.context.pipeline.loop_termination_reason = "report_completion"
-            _tool_result(wrapper.context, "done", req_args, f"{outcome}: {message}")
-            print(f"{CLI_GREEN}Agent {outcome}{CLI_CLR}")
-            print(f"  Message: {message}")
-            if refs:
-                print("  Refs:")
-                for ref in refs:
-                    print(f"    - {ref}")
-        except ConnectError as err:
-            _tool_error(wrapper.context, "done", req_args, err)
-        return f"{outcome}: {message}"
+            text = json.dumps(MessageToDict(resp), indent=2)
+        else:
+            text = f"ERROR: Unknown mode '{mode}'. Use 'tree', 'ls', or 'find'."
+        return _tool_result(ctx, "browse", req_args, text)
+    except ConnectError as err:
+        return _tool_error(ctx, "browse", req_args, err)
+
+
+def search(
+    ctx: AgentRuntimeContext,
+    pattern: str,
+    root: str = "/",
+    limit: int = 10,
+) -> str:
+    """Search file contents using a regex or substring pattern."""
+    req_args = {"pattern": pattern, "root": root, "limit": limit}
+    try:
+        resp = ctx.vm.search(SearchRequest(root=root, pattern=pattern, limit=limit))
+        text = json.dumps(MessageToDict(resp), indent=2)
+        return _tool_result(ctx, "search", req_args, text)
+    except ConnectError as err:
+        return _tool_error(ctx, "search", req_args, err)
+
+
+def write_file(ctx: AgentRuntimeContext, path: str, content: str) -> str:
+    """Write content to a file. Creates parent directories if needed."""
+    req_args = {"path": path, "content": content}
+    err = validate_or_error(ctx, "write", req_args)
+    if err:
+        print(f"{CLI_RED}{err}{CLI_CLR}")
+        return err
+
+    # Template protection guard
+    filename = path.split("/")[-1].lower()
+    if filename.startswith("_") or "template" in filename:
+        error_msg = f"ERROR: Cannot write to template/scaffolding file: {path}"
+        return _tool_result(ctx, "write_file", req_args, error_msg)
+
+    # Auto-mkdir parent
+    parent = str(PurePosixPath(path).parent)
+    if parent and parent != "/" and parent != ".":
+        try:
+            ctx.vm.mk_dir(MkDirRequest(path=parent))
+        except ConnectError:
+            pass
+
+    try:
+        ctx.vm.write(WriteRequest(path=path, content=content.rstrip("\n")))
+        # Auto-verify by reading back
+        verify = ctx.vm.read(ReadRequest(path=path))
+        _record_file_use(ctx, path)
+        result = f"OK. Verified content ({len(verify.content)} chars)"
+        return _tool_result(ctx, "write_file", req_args, result)
+    except ConnectError as err:
+        return _tool_error(ctx, "write_file", req_args, err)
+
+
+def delete_file(ctx: AgentRuntimeContext, path: str) -> str:
+    """Delete a file or directory."""
+    req_args = {"path": path}
+    err = validate_or_error(ctx, "delete", req_args)
+    if err:
+        print(f"{CLI_RED}{err}{CLI_CLR}")
+        return err
+
+    # Template protection guard
+    filename = path.split("/")[-1].lower()
+    if filename.startswith("_") or "template" in filename:
+        error_msg = f"ERROR: Cannot delete template/scaffolding file: {path}"
+        return _tool_result(ctx, "delete_file", req_args, error_msg)
+
+    try:
+        ctx.vm.delete(DeleteRequest(path=path))
+        return _tool_result(ctx, "delete_file", req_args, "DELETED")
+    except ConnectError as err:
+        return _tool_error(ctx, "delete_file", req_args, err)
+
+
+def move_file(ctx: AgentRuntimeContext, from_path: str, to_path: str) -> str:
+    """Move or rename a file."""
+    req_args = {"from_path": from_path, "to_path": to_path}
+    try:
+        resp = ctx.vm.move(MoveRequest(from_name=from_path, to_name=to_path))
+        text = json.dumps(MessageToDict(resp), indent=2)
+        return _tool_result(ctx, "move_file", req_args, text)
+    except ConnectError as err:
+        return _tool_error(ctx, "move_file", req_args, err)
+
+
+def done(
+    ctx: AgentRuntimeContext,
+    message: str,
+    outcome: str,
+    refs: List[str] | None = None,
+) -> str:
+    """Submit final answer. Must be called exactly once."""
+    refs = refs or []
+    refs = [ref.lstrip("/") for ref in refs if isinstance(ref, str)]
+    outcome_proto = OUTCOME_BY_NAME.get(outcome, Outcome.OUTCOME_OK)
+    req_args = {
+        "tool": "done",
+        "message": message,
+        "outcome": outcome,
+        "refs": refs,
+    }
+    err = validate_or_error(ctx, "report_completion", req_args)
+    if err:
+        print(f"{CLI_RED}{err}{CLI_CLR}")
+        return err
+    try:
+        ctx.vm.answer(AnswerRequest(
+            message=message, outcome=outcome_proto, refs=refs
+        ))
+        ctx.pipeline.final_answer = message
+        ctx.pipeline.final_code = outcome
+        ctx.pipeline.harness_answer_submitted = True
+        ctx.pipeline.loop_termination_reason = "report_completion"
+        _tool_result(ctx, "done", req_args, f"{outcome}: {message}")
+        print(f"{CLI_GREEN}Agent {outcome}{CLI_CLR}")
+        print(f"  Message: {message}")
+        if refs:
+            print("  Refs:")
+            for ref in refs:
+                print(f"    - {ref}")
+    except ConnectError as err:
+        _tool_error(ctx, "done", req_args, err)
+    return f"{outcome}: {message}"
+
+
+# ── Tool schemas for OpenAI function calling ─────────────────────
+
+TOOL_SCHEMAS = [
+    {
+        "type": "function",
+        "function": {
+            "name": "read_file",
+            "description": (
+                "Read a file. Returns file content, or 'NOT_FOUND' if the file doesn't exist.\n\n"
+                "Use this instead of browse() when you know the exact file path.\n"
+                "Do NOT re-read files already shown in your context under [TRUSTED RULE] sections."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "path": {"type": "string", "description": "File path to read"},
+                },
+                "required": ["path"],
+                "additionalProperties": False,
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "browse",
+            "description": "Browse the filesystem.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "path": {"type": "string", "description": 'Directory to browse (default: "/")'},
+                    "mode": {
+                        "type": "string",
+                        "description": '"tree" (recursive), "ls" (direct children), "find" (search by filename)',
+                    },
+                    "name": {
+                        "type": "string",
+                        "description": 'Filename pattern for mode="find" (e.g. "*.md", "SR-13.json")',
+                    },
+                },
+                "required": [],
+                "additionalProperties": False,
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "search",
+            "description": "Search file contents using a regex or substring pattern.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "pattern": {
+                        "type": "string",
+                        "description": "Regex or substring to search for inside file contents",
+                    },
+                    "root": {"type": "string", "description": 'Directory to search under (default: "/")'},
+                    "limit": {
+                        "type": "integer",
+                        "description": "Maximum number of matching files to return",
+                    },
+                },
+                "required": ["pattern"],
+                "additionalProperties": False,
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "write_file",
+            "description": (
+                "Write content to a file. Creates parent directories if needed.\n"
+                "Returns verified content length on success, or an error message."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "path": {"type": "string", "description": "File path to write to"},
+                    "content": {"type": "string", "description": "Full file content to write"},
+                },
+                "required": ["path", "content"],
+                "additionalProperties": False,
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "delete_file",
+            "description": "Delete a file or directory.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "path": {"type": "string", "description": "File or directory path to delete"},
+                },
+                "required": ["path"],
+                "additionalProperties": False,
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "move_file",
+            "description": "Move or rename a file.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "from_path": {"type": "string", "description": "Current file path"},
+                    "to_path": {"type": "string", "description": "New file path"},
+                },
+                "required": ["from_path", "to_path"],
+                "additionalProperties": False,
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "done",
+            "description": "Submit final answer. Must be called exactly once.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "message": {
+                        "type": "string",
+                        "description": "What you did or why you can't. Be specific.",
+                    },
+                    "outcome": {
+                        "type": "string",
+                        "description": (
+                            "OUTCOME_OK, OUTCOME_DENIED_SECURITY, OUTCOME_NONE_CLARIFICATION, "
+                            "OUTCOME_NONE_UNSUPPORTED, or OUTCOME_ERR_INTERNAL"
+                        ),
+                    },
+                    "refs": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "Files you read/wrote/deleted (no leading /)",
+                    },
+                },
+                "required": ["message", "outcome"],
+                "additionalProperties": False,
+            },
+        },
+    },
+]
+
+
+# ── Dispatcher ────────────────────────────────────────────────────
+
+_TOOL_DISPATCH = {
+    "read_file": read_file,
+    "browse": browse,
+    "search": search,
+    "write_file": write_file,
+    "delete_file": delete_file,
+    "move_file": move_file,
+    "done": done,
+}
+
+
+def dispatch_tool(name: str, arguments: dict, ctx: AgentRuntimeContext) -> str:
+    """Dispatch a tool call by name, passing parsed arguments to the tool function."""
+    fn = _TOOL_DISPATCH.get(name)
+    if fn is None:
+        return f"ERROR: Unknown tool '{name}'"
+    return fn(ctx, **arguments)

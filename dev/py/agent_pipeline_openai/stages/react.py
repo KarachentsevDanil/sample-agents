@@ -1,75 +1,83 @@
+"""ReAct execution loop — raw OpenAI API with tool calls."""
+
+import json
 import time
-from typing import Any, List
+
+from openai import OpenAI
 
 from ..infra._cli import CLI_RED, CLI_GREEN, CLI_CLR
 from ..models import AgentRuntimeContext, PipelineContext
 from ..prompt_resources.prompt_manager import PromptManager
 from ..prompt_resources.prompts import build_initial_user_message
-from ..infra.usage import summarize_result_usage
 
-from .react_tools import (
-    OUTCOME_BY_NAME,
-    read_file, browse, search, write_file, delete_file, move_file, done,
-)
-
-try:
-    from agents import Agent, Runner
-    from agents.agent import ToolsToFinalOutputResult
-    from agents.items import ItemHelpers, MessageOutputItem
-except ImportError as exc:
-    Agent = None
-    Runner = None
-    ToolsToFinalOutputResult = None
-    ItemHelpers = None
-    MessageOutputItem = None
-    _IMPORT_ERROR = exc
-else:
-    _IMPORT_ERROR = None
-
-
-def _ensure_sdk() -> None:
-    if Agent is None or Runner is None or ToolsToFinalOutputResult is None:
-        raise RuntimeError(
-            "OpenAI Agents SDK backend selected, but `openai-agents` is not installed. "
-            "Install it with `uv add openai-agents`."
-        ) from _IMPORT_ERROR
-
-
-def _stop_on_done(wrapper: Any, results: List[Any]) -> Any:
-    for result in results:
-        tool = getattr(result, "tool", None)
-        tool_name = getattr(tool, "name", "")
-        if tool_name == "done":
-            return ToolsToFinalOutputResult(
-                is_final_output=True,
-                final_output=getattr(result, "output", ""),
-            )
-    return ToolsToFinalOutputResult(is_final_output=False)
+from .react_tools import TOOL_SCHEMAS, dispatch_tool
 
 
 class ReActLoopStage:
-    """ReAct execution loop using the OpenAI Agents SDK — v2 with 7 tools."""
+    """ReAct execution loop using raw OpenAI chat completions with tool calls."""
 
-    def __init__(self, vm, model: str, prompt_manager: PromptManager):
+    def __init__(self, vm, model: str, prompt_manager: PromptManager, client: OpenAI):
         self._vm = vm
         self._model = model
         self._prompt_manager = prompt_manager
+        self._client = client
 
     def execute(self, ctx: PipelineContext, logger) -> None:
-        _ensure_sdk()
         prompt = build_initial_user_message(ctx)
-
         max_steps = ctx.react_max_steps
         runtime = AgentRuntimeContext(vm=self._vm, pipeline=ctx, logger=logger, model=self._model)
-        agent = Agent(
-            name="Dev ReAct Agent",
-            instructions=self._prompt_manager.get("system"),
-            model=self._model,
-            tools=[read_file, browse, search, write_file, delete_file, move_file, done],
-            tool_use_behavior=_stop_on_done,
-        )
+
+        messages = [
+            {"role": "system", "content": self._prompt_manager.get("system")},
+            {"role": "user", "content": prompt},
+        ]
+
+        usage_totals = {"requests": 0, "input_tokens": 0, "output_tokens": 0, "total_tokens": 0}
+
         try:
-            result = Runner.run_sync(agent, input=prompt, context=runtime, max_turns=max_steps)
+            for _turn in range(max_steps):
+                response = self._client.chat.completions.create(
+                    model=self._model,
+                    messages=messages,
+                    tools=TOOL_SCHEMAS,
+                )
+                _accumulate_usage(usage_totals, response)
+
+                choice = response.choices[0]
+                assistant_msg = choice.message
+
+                # Append assistant message to conversation history
+                messages.append(_serialize_message(assistant_msg))
+
+                # Log reasoning text if present
+                if assistant_msg.content and assistant_msg.content.strip():
+                    logger.append_api_call({
+                        "stage": "react_reasoning",
+                        "ts": time.time(),
+                        "text": assistant_msg.content,
+                        "type": "reasoning",
+                    })
+
+                # No tool calls — model stopped on its own
+                if not assistant_msg.tool_calls:
+                    break
+
+                # Dispatch each tool call
+                done_called = False
+                for tc in assistant_msg.tool_calls:
+                    arguments = json.loads(tc.function.arguments)
+                    result = dispatch_tool(tc.function.name, arguments, runtime)
+                    messages.append({
+                        "role": "tool",
+                        "tool_call_id": tc.id,
+                        "content": result,
+                    })
+                    if tc.function.name == "done":
+                        done_called = True
+
+                if done_called:
+                    break
+
         except Exception as exc:
             print(f"{CLI_RED}ReAct stage failed: {exc}{CLI_CLR}")
             if not ctx.loop_termination_reason:
@@ -80,24 +88,11 @@ class ReActLoopStage:
             "stage": "react_run",
             "ts": time.time(),
             "model": self._model,
-            "usage": summarize_result_usage(result),
-            "turns": len(getattr(result, "raw_responses", []) or []),
+            "usage": usage_totals if usage_totals["requests"] > 0 else None,
+            "turns": usage_totals["requests"],
         })
 
-        # Extract and log assistant reasoning
-        if ItemHelpers is not None and MessageOutputItem is not None:
-            for item in getattr(result, 'new_items', []):
-                if isinstance(item, MessageOutputItem):
-                    text = ItemHelpers.text_message_output(item)
-                    if text.strip():
-                        logger.append_api_call({
-                            "stage": "react_reasoning",
-                            "ts": time.time(),
-                            "text": text,
-                            "type": "reasoning",
-                        })
-
-        # Check if done() was called (harness_answer_submitted flag)
+        # Determine termination reason
         if ctx.harness_answer_submitted:
             if not ctx.loop_termination_reason:
                 ctx.loop_termination_reason = "report_completion"
@@ -107,3 +102,31 @@ class ReActLoopStage:
         else:
             if not ctx.loop_termination_reason:
                 ctx.loop_termination_reason = "max_steps_reached"
+
+
+def _serialize_message(msg) -> dict:
+    """Convert a ChatCompletionMessage to a dict suitable for the messages list."""
+    d = {"role": msg.role, "content": msg.content}
+    if msg.tool_calls:
+        d["tool_calls"] = [
+            {
+                "id": tc.id,
+                "type": "function",
+                "function": {
+                    "name": tc.function.name,
+                    "arguments": tc.function.arguments,
+                },
+            }
+            for tc in msg.tool_calls
+        ]
+    return d
+
+
+def _accumulate_usage(totals: dict, response) -> None:
+    """Add token counts from a single API response to running totals."""
+    totals["requests"] += 1
+    usage = response.usage
+    if usage:
+        totals["input_tokens"] += usage.prompt_tokens or 0
+        totals["output_tokens"] += usage.completion_tokens or 0
+        totals["total_tokens"] += usage.total_tokens or 0

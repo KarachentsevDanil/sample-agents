@@ -1,4 +1,4 @@
-"""LLM-driven context discovery — replaces deterministic BFS.
+"""LLM-driven context discovery — raw OpenAI API with tool calls.
 
 Uses the same nano model with a read_file tool to follow the authority
 chain from AGENTS.md through all referenced files. A HashSet (discovered)
@@ -8,29 +8,20 @@ reads those, and continues until no new refs remain.
 
 from __future__ import annotations
 
+import json
 import time
 from dataclasses import dataclass, field
-from typing import Any, List
+from typing import Any
 
 from connectrpc.errors import ConnectError
+from openai import OpenAI
 
 from bitgn.vm.pcm_pb2 import ReadRequest
 
 from ..infra._cli import CLI_GREEN, CLI_CLR
-from ..infra.usage import summarize_result_usage
 from ..prompt_resources.prompt_manager import PromptManager
 
 MAX_CONTEXT_READS = 12
-
-try:
-    from agents import Agent, RunContextWrapper, Runner, function_tool
-    from agents.agent import ToolsToFinalOutputResult
-except ImportError:
-    Agent = None
-    RunContextWrapper = Any
-    Runner = None
-    function_tool = None
-    ToolsToFinalOutputResult = None
 
 
 # ── Agent context ─────────────────────────────────────────────────
@@ -42,53 +33,78 @@ class DiscoveryContext:
     read_order: list[str] = field(default_factory=list)
 
 
-# ── Tools ─────────────────────────────────────────────────────────
+# ── Tools (plain functions) ──────────────────────────────────────
 
-if function_tool is not None:
-
-    @function_tool
-    def read_file(wrapper: RunContextWrapper[DiscoveryContext], path: str) -> str:
-        """Read a file from the repo. Returns content or NOT_FOUND.
-
-        Args:
-            path: File path to read (e.g., 90_memory/Soul.md)
-        """
-        ctx = wrapper.context
-        norm = path.lstrip("/")
-        if any(norm.lower() == k.lower() for k in ctx.discovered):
-            return f"[ALREADY READ] {path} — skip, look for other references."
-        if len(ctx.discovered) >= MAX_CONTEXT_READS:
-            return "Read budget exhausted. Call done() now."
-        try:
-            content = ctx.vm.read(ReadRequest(path=path)).content
-            ctx.discovered[norm] = content
-            ctx.read_order.append(norm)
-            print(f"  {CLI_GREEN}[CONTEXT_AGENT]{CLI_CLR} read: {path} ({len(content)} chars)")
-            return content
-        except ConnectError:
-            return f"NOT_FOUND: {path}"
-
-    @function_tool
-    def done(wrapper: RunContextWrapper[DiscoveryContext]) -> str:
-        """Signal that all authority files have been discovered.
-
-        Call this when you have read all referenced rule/authority files.
-        """
-        count = len(wrapper.context.discovered)
-        print(f"  {CLI_GREEN}[CONTEXT_AGENT]{CLI_CLR} done — {count} files discovered")
-        return "DONE"
+def _read_file(ctx: DiscoveryContext, path: str) -> str:
+    """Read a file from the repo. Returns content or NOT_FOUND."""
+    norm = path.lstrip("/")
+    if any(norm.lower() == k.lower() for k in ctx.discovered):
+        return f"[ALREADY READ] {path} — skip, look for other references."
+    if len(ctx.discovered) >= MAX_CONTEXT_READS:
+        return "Read budget exhausted. Call done() now."
+    try:
+        content = ctx.vm.read(ReadRequest(path=path)).content
+        ctx.discovered[norm] = content
+        ctx.read_order.append(norm)
+        print(f"  {CLI_GREEN}[CONTEXT_AGENT]{CLI_CLR} read: {path} ({len(content)} chars)")
+        return content
+    except ConnectError:
+        return f"NOT_FOUND: {path}"
 
 
-def _stop_on_done(wrapper: Any, results: list) -> Any:
-    for result in results:
-        tool = getattr(result, "tool", None)
-        tool_name = getattr(tool, "name", "")
-        if tool_name == "done":
-            return ToolsToFinalOutputResult(
-                is_final_output=True,
-                final_output=getattr(result, "output", ""),
-            )
-    return ToolsToFinalOutputResult(is_final_output=False)
+def _done(ctx: DiscoveryContext) -> str:
+    """Signal that all authority files have been discovered."""
+    count = len(ctx.discovered)
+    print(f"  {CLI_GREEN}[CONTEXT_AGENT]{CLI_CLR} done — {count} files discovered")
+    return "DONE"
+
+
+# ── Tool schemas & dispatch ──────────────────────────────────────
+
+_TOOL_SCHEMAS = [
+    {
+        "type": "function",
+        "function": {
+            "name": "read_file",
+            "description": "Read a file from the repo. Returns content or NOT_FOUND.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "path": {
+                        "type": "string",
+                        "description": "File path to read (e.g., 90_memory/Soul.md)",
+                    },
+                },
+                "required": ["path"],
+                "additionalProperties": False,
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "done",
+            "description": (
+                "Signal that all authority files have been discovered. "
+                "Call this when you have read all referenced rule/authority files."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {},
+                "required": [],
+                "additionalProperties": False,
+            },
+        },
+    },
+]
+
+
+def _dispatch_tool(name: str, arguments: dict, ctx: DiscoveryContext) -> str:
+    if name == "read_file":
+        return _read_file(ctx, **arguments)
+    if name == "done":
+        return _done(ctx)
+    return f"ERROR: Unknown tool '{name}'"
 
 
 # ── Agent stage ───────────────────────────────────────────────────
@@ -96,10 +112,11 @@ def _stop_on_done(wrapper: Any, results: list) -> Any:
 class ContextDiscoveryAgent:
     """Discovers authority files by following refs from AGENTS.md."""
 
-    def __init__(self, vm, model: str, prompt_manager: PromptManager):
+    def __init__(self, vm, model: str, prompt_manager: PromptManager, client: OpenAI):
         self._vm = vm
         self._model = model
         self._prompt_manager = prompt_manager
+        self._client = client
 
     def execute(
         self,
@@ -110,12 +127,6 @@ class ContextDiscoveryAgent:
         logger,
     ) -> dict[str, str]:
         """Run the discovery agent. Returns {path: content} of authority files."""
-        if Agent is None or Runner is None or function_tool is None:
-            print("[CONTEXT_AGENT] Skipped: openai-agents not installed")
-            if agents_md_path and agents_md:
-                return {agents_md_path: agents_md}
-            return {}
-
         # Seed with root AGENTS.md if available
         disc_ctx = DiscoveryContext(vm=self._vm)
         if agents_md_path and agents_md:
@@ -129,24 +140,52 @@ class ContextDiscoveryAgent:
         parts.append(f"Filesystem tree:\n{dfs_tree}")
         user_input = "\n\n".join(parts)
 
-        agent = Agent(
-            name="Context Discovery",
-            instructions=self._prompt_manager.get("context_agent"),
-            model=self._model,
-            tools=[read_file, done],
-            tool_use_behavior=_stop_on_done,
-        )
+        messages = [
+            {"role": "system", "content": self._prompt_manager.get("context_agent")},
+            {"role": "user", "content": user_input},
+        ]
 
         print(f"[CONTEXT_AGENT] Starting discovery from {agents_md_path}")
         t0 = time.time()
 
-        try:
-            result = Runner.run_sync(
-                agent, input=user_input, context=disc_ctx, max_turns=MAX_CONTEXT_READS,
-            )
-            elapsed_ms = int((time.time() - t0) * 1000)
-            usage = summarize_result_usage(result)
+        usage_totals = {"requests": 0, "input_tokens": 0, "output_tokens": 0, "total_tokens": 0}
 
+        try:
+            for _turn in range(MAX_CONTEXT_READS):
+                response = self._client.chat.completions.create(
+                    model=self._model,
+                    messages=messages,
+                    tools=_TOOL_SCHEMAS,
+                )
+                _accumulate_usage(usage_totals, response)
+
+                choice = response.choices[0]
+                assistant_msg = choice.message
+
+                # Append assistant message to history
+                messages.append(_serialize_message(assistant_msg))
+
+                # No tool calls — model stopped
+                if not assistant_msg.tool_calls:
+                    break
+
+                # Dispatch tool calls
+                done_called = False
+                for tc in assistant_msg.tool_calls:
+                    arguments = json.loads(tc.function.arguments)
+                    result = _dispatch_tool(tc.function.name, arguments, disc_ctx)
+                    messages.append({
+                        "role": "tool",
+                        "tool_call_id": tc.id,
+                        "content": result,
+                    })
+                    if tc.function.name == "done":
+                        done_called = True
+
+                if done_called:
+                    break
+
+            elapsed_ms = int((time.time() - t0) * 1000)
             logger.append_api_call({
                 "stage": "context_agent",
                 "ts": time.time(),
@@ -155,14 +194,42 @@ class ContextDiscoveryAgent:
                 "read_count": len(disc_ctx.discovered),
                 "read_order": disc_ctx.read_order,
                 "elapsed_ms": elapsed_ms,
-                "usage": usage,
+                "usage": usage_totals if usage_totals["requests"] > 0 else None,
             })
             print(
                 f"[CONTEXT_AGENT] Done: {len(disc_ctx.discovered)} files, "
-                f"{elapsed_ms}ms, {usage.get('total_tokens', 0)} tokens"
+                f"{elapsed_ms}ms, {usage_totals.get('total_tokens', 0)} tokens"
             )
 
         except Exception as e:
             print(f"[CONTEXT_AGENT] Failed ({e}), returning partial: {list(disc_ctx.discovered.keys())}")
 
         return disc_ctx.discovered
+
+
+def _serialize_message(msg) -> dict:
+    """Convert a ChatCompletionMessage to a dict for the messages list."""
+    d = {"role": msg.role, "content": msg.content}
+    if msg.tool_calls:
+        d["tool_calls"] = [
+            {
+                "id": tc.id,
+                "type": "function",
+                "function": {
+                    "name": tc.function.name,
+                    "arguments": tc.function.arguments,
+                },
+            }
+            for tc in msg.tool_calls
+        ]
+    return d
+
+
+def _accumulate_usage(totals: dict, response) -> None:
+    """Add token counts from a single API response to running totals."""
+    totals["requests"] += 1
+    usage = response.usage
+    if usage:
+        totals["input_tokens"] += usage.prompt_tokens or 0
+        totals["output_tokens"] += usage.completion_tokens or 0
+        totals["total_tokens"] += usage.total_tokens or 0

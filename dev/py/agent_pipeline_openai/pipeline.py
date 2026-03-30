@@ -1,5 +1,7 @@
 from datetime import datetime, timezone
 
+from openai import OpenAI
+
 from .stages.context import ContextBuilderStage
 from .infra.logger import RunLogger
 from .models import PipelineContext, budget_from_plan
@@ -9,20 +11,23 @@ from .stages.react import ReActLoopStage
 
 
 def execute_context_builder(vm, model: str, prompt_manager: PromptManager,
-                            ctx: PipelineContext, logger: RunLogger) -> None:
-    ContextBuilderStage(vm, model, prompt_manager).execute(ctx, logger)
+                            ctx: PipelineContext, logger: RunLogger,
+                            client: OpenAI = None) -> None:
+    ContextBuilderStage(vm, model, prompt_manager, client).execute(ctx, logger)
 
 
 def build_initial_plan(model: str, prompt_manager: PromptManager,
-                       ctx: PipelineContext, logger: RunLogger) -> None:
-    PlanningStage(model, prompt_manager).execute(ctx, logger)
+                       ctx: PipelineContext, logger: RunLogger,
+                       client: OpenAI = None) -> None:
+    PlanningStage(model, prompt_manager, client).execute(ctx, logger)
     if ctx.task_plan:
         ctx.react_max_steps = budget_from_plan(len(ctx.task_plan.steps))
 
 
 def execute_react_loop(vm, model: str, prompt_manager: PromptManager,
-                       ctx: PipelineContext, logger: RunLogger) -> None:
-    ReActLoopStage(vm, model, prompt_manager).execute(ctx, logger)
+                       ctx: PipelineContext, logger: RunLogger,
+                       client: OpenAI = None) -> None:
+    ReActLoopStage(vm, model, prompt_manager, client).execute(ctx, logger)
 
 
 def _write_run_result(ctx: PipelineContext, logger: RunLogger) -> None:
@@ -32,7 +37,7 @@ def _write_run_result(ctx: PipelineContext, logger: RunLogger) -> None:
         "files_used": ctx.files_used,
         "step_count": len(ctx.react_trace),
         "finished_at": datetime.now(timezone.utc).isoformat(),
-        "backend": "openai_agents_v2",
+        "backend": "openai_raw",
         "planning_enabled": ctx.task_plan is not None,
         "plan_complexity": ctx.task_plan.complexity if ctx.task_plan else None,
         "plan_steps_count": len(ctx.task_plan.steps) if ctx.task_plan else None,
@@ -44,6 +49,7 @@ def _write_run_result(ctx: PipelineContext, logger: RunLogger) -> None:
 
 def run_openai_pipeline(model: str, vm, task: str, task_id: str = "", run_dir=None) -> PipelineContext:
     """v2 pipeline: build_context → plan → execute → submit."""
+    client = OpenAI()
     prompt_manager = PromptManager()
     ctx = PipelineContext(task=task, model=model)
     logger = RunLogger(task_id=task_id, run_dir=run_dir)
@@ -54,20 +60,20 @@ def run_openai_pipeline(model: str, vm, task: str, task_id: str = "", run_dir=No
         "task": task,
         "task_fragment": task[:200],
         "started_at": datetime.now(timezone.utc).isoformat(),
-        "backend": "openai_agents_v2",
+        "backend": "openai_raw",
         "prompt_versions": prompt_manager.active_versions(),
     })
 
     # Stage 1: Build context
-    execute_context_builder(vm, model, prompt_manager, ctx, logger)
+    execute_context_builder(vm, model, prompt_manager, ctx, logger, client)
 
     # Stage 2: Plan (1 LLM call)
     if not ctx.pipeline_complete:
-        build_initial_plan(model, prompt_manager, ctx, logger)
+        build_initial_plan(model, prompt_manager, ctx, logger, client)
 
     # Stage 3: Execute (ReAct loop)
     if not ctx.pipeline_complete:
-        execute_react_loop(vm, model, prompt_manager, ctx, logger)
+        execute_react_loop(vm, model, prompt_manager, ctx, logger, client)
 
     _write_run_result(ctx, logger)
     return ctx

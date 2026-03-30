@@ -89,12 +89,12 @@ class RunLogger:
                 "thinking": call.get("thinking", ""),
                 "output": {
                     "type": "tool_use",
-                    "tool_name": matched_steps[0]["cmd"] if matched_steps else None,
+                    "tool_name": matched_steps[0].get("cmd") if matched_steps else None,
                     "args": matched_steps[0].get("args") if matched_steps else None,
                 },
                 "tool_calls": [
-                    {"name": s["cmd"], "request": s.get("args", {}), "response": s.get("result", "")}
-                    for s in matched_steps if s.get("type") != "validator_step"
+                    {"name": s.get("cmd", ""), "request": s.get("args", {}), "response": s.get("result", "")}
+                    for s in matched_steps if s.get("type") not in ("validator_step", "reasoning")
                 ],
             })
 

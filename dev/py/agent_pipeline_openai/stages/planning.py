@@ -10,47 +10,46 @@ from __future__ import annotations
 
 import time
 
+from openai import OpenAI
+
 from ..models import PipelineContext, TaskPlan, PLAN_SIZE_CONFIG, budget_from_plan
 from ..infra._cli import CLI_GREEN, CLI_CLR
 from ..prompt_resources.prompt_manager import PromptManager
-from ..infra.usage import summarize_result_usage
-
-try:
-    from agents import Agent, Runner
-except ImportError:
-    Agent = None
-    Runner = None
 
 
 class PlanningStage:
-    def __init__(self, model: str, prompt_manager: PromptManager):
+    def __init__(self, model: str, prompt_manager: PromptManager, client: OpenAI):
         self._model = model
         self._prompt_manager = prompt_manager
+        self._client = client
 
     def execute(self, ctx: PipelineContext, logger) -> None:
-        if Agent is None or Runner is None:
-            print("[PLAN] Skipped: openai-agents not installed")
-            return
-
         user_content = self._build_planning_input(ctx)
         try:
             instructions = self._prompt_manager.get("planning")
-            agent = Agent(
-                name="Task Planner",
-                instructions=instructions,
+            response = self._client.beta.chat.completions.parse(
                 model=self._model,
-                output_type=TaskPlan,
+                messages=[
+                    {"role": "system", "content": instructions},
+                    {"role": "user", "content": user_content},
+                ],
+                response_format=TaskPlan,
             )
-            result = Runner.run_sync(agent, input=user_content)
+
+            usage = response.usage
             logger.append_api_call({
                 "stage": "planning",
                 "ts": time.time(),
                 "model": self._model,
                 "input_fragment": user_content[:200],
-                "usage": summarize_result_usage(result),
+                "usage": {
+                    "input_tokens": usage.prompt_tokens or 0,
+                    "output_tokens": usage.completion_tokens or 0,
+                    "total_tokens": usage.total_tokens or 0,
+                } if usage else None,
             })
 
-            plan = result.final_output
+            plan = response.choices[0].message.parsed
             if not isinstance(plan, TaskPlan):
                 print("[PLAN] Unexpected output type, continuing without plan")
                 return
