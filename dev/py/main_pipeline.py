@@ -213,7 +213,7 @@ def main() -> None:
 
     if BACKEND == "claude":
         from agent_pipeline_claude import run_agent
-        from agent_pipeline_claude.logger import log_benchmark_result
+        from agent_pipeline_claude.infra.logger import log_benchmark_result
     elif BACKEND == "openai":
         from agent_pipeline_openai import run_agent
         from agent_pipeline_openai.infra.logger import log_benchmark_result

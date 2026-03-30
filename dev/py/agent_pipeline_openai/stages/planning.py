@@ -35,9 +35,6 @@ class PlanningStage:
         user_content = self._build_planning_input(ctx)
         try:
             instructions = self._prompt_manager.get("planning")
-            print(f"[PLAN] Instructions:\n{instructions}")
-            print(f"[PLAN] Input:\n{user_content}")
-
             agent = Agent(
                 name="Task Planner",
                 instructions=instructions,

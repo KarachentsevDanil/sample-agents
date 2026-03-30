@@ -70,13 +70,10 @@ class RunLogger:
 
         trace = []
 
-        # Build trace events from api_calls (LLM calls)
         for call in api_calls:
             node_id = call.get("node_id", str(call.get("step", 0)))
             matched_steps = steps_by_node.get(node_id, [])
 
-            # Skip entries that are tool-level records (OpenAI pipeline writes
-            # tool results to api_calls.jsonl with a "cmd" field)
             if "cmd" in call and "stage" not in call:
                 continue
 
@@ -101,20 +98,8 @@ class RunLogger:
                 ],
             })
 
-        # Append validator and reasoning steps from react_trace
         for s in react_steps:
-            if s.get("type") == "validator_step":
-                trace.append({
-                    "type": "validator_step",
-                    "node_id": s.get("node_id", ""),
-                    "parent_node_id": None,
-                    "depth": 0,
-                    "ts": s.get("ts", 0),
-                    "context": "Verifier",
-                    "validation_passed": s.get("validation_passed", None),
-                    "result": s.get("result", ""),
-                })
-            elif s.get("type") == "reasoning":
+            if s.get("type") == "reasoning":
                 trace.append({
                     "type": "reasoning",
                     "node_id": s.get("node_id", ""),
@@ -146,11 +131,10 @@ class RunLogger:
 
     def _write_trace_html(self, trace_data: dict) -> None:
         """Generate self-contained trace.html with embedded trace data."""
-        template_path = Path(__file__).resolve().parent.parent / "trace_viewer.html"
+        template_path = Path(__file__).resolve().parent.parent.parent / "trace_viewer.html"
         if not template_path.exists():
             return
         template = template_path.read_text()
-        # Inject trace data by replacing the placeholder
         trace_json = json.dumps(trace_data)
         html = template.replace(
             '/*TRACE_JSON_PLACEHOLDER*/ null',

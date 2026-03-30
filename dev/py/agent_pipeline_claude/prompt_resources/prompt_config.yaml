@@ -1,6 +1,6 @@
 active:
   system: v9
   context: v2
-  verifier: v2
+  context_agent: v1
   planning: v1
   rules_extraction: v1
