@@ -3,7 +3,6 @@ active:
   context: v2
   context_agent: v1
   planning: v2
-  rules_extraction: v1
 
 # Per-stage model overrides. Null = fall back to pipeline default.
 models:

@@ -3,7 +3,6 @@ active:
   context: v3
   context_agent: v1
   planning: v3
-  rules_extraction: v1
 
 # Per-stage model overrides. Omit a stage to fall back to the pipeline default.
 # Heavier models for reasoning-intensive stages, lighter for execution.

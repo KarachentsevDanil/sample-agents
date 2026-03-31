@@ -1,22 +1,7 @@
-import hashlib
 from dataclasses import dataclass, field
 from typing import Any, List, Literal, Optional
 
 from pydantic import BaseModel, Field
-
-
-class ReportTaskCompletion(BaseModel):
-    tool: Literal["report_completion"]
-    completed_steps_laconic: List[str]
-    message: str
-    grounding_refs: List[str] = Field(default_factory=list)
-    outcome: Literal[
-        "OUTCOME_OK",
-        "OUTCOME_DENIED_SECURITY",
-        "OUTCOME_NONE_CLARIFICATION",
-        "OUTCOME_NONE_UNSUPPORTED",
-        "OUTCOME_ERR_INTERNAL",
-    ]
 
 
 # ── Planning (T3: planning stage) ───────────────────────────────────
@@ -83,10 +68,6 @@ class PipelineContext:
 
     # Observability
     loop_termination_reason: str = ""
-
-    @property
-    def task_hash(self) -> str:
-        return hashlib.sha256(self.task.encode()).hexdigest()[:16]
 
 
 @dataclass

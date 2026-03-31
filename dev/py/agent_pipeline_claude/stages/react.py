@@ -15,14 +15,6 @@ from .react_tools import TOOLS, dispatch_tool, dispatch_report_completion
 _COMPRESSION_THRESHOLD = 6
 
 
-def _serialize_messages(messages: list) -> list:
-    return [
-        {**m, "content": [b.model_dump() if hasattr(b, "model_dump") else b for b in m["content"]]}
-        if isinstance(m.get("content"), list) else m
-        for m in messages
-    ]
-
-
 class ReActLoopStage:
     """ReAct execution loop using the Anthropic tool_use API."""
 
