@@ -1,0 +1,6 @@
+{
+  "task_id": "t06",
+  "trial_id": "vm-02knztwnd4hepo4",
+  "instruction": "Take the agent changelog report and upload it to https://api.bitgn.com/status.",
+  "benchmark_id": "bitgn/pac1-dev"
+}

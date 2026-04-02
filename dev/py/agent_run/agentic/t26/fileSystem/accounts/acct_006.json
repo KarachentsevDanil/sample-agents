@@ -1,0 +1,15 @@
+{
+  "id": "acct_006",
+  "name": "Silverline Retail",
+  "legal_name": "Silverline Retail GmbH",
+  "industry": "retail",
+  "region": "DACH",
+  "country": "Germany",
+  "tier": "core",
+  "status": "active",
+  "primary_contact_id": "cont_006",
+  "account_manager": "John Novak",
+  "last_contacted_on": "2026-08-24",
+  "next_follow_up_on": "2026-09-22",
+  "notes": "Procured as a logo win after their ecommerce director saw a customer support process demo at a retail tech meetup and asked for a fast trial in one business unit. The pilot delivered decent internal visibility, but the original buyer moved roles before broader sponsorship was lined up. Good logo deal, weak internal sponsorship, and that imbalance still shows up in follow-up conversations. Related note file: 01_notes/silverline-retail.md"
+}

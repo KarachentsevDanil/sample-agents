@@ -1,0 +1,11 @@
+{
+  "id": "rem_001",
+  "account_id": "acct_001",
+  "contact_id": "cont_001",
+  "due_on": "2026-09-07",
+  "title": "Follow up with Nordlicht Health",
+  "kind": "follow_up",
+  "status": "open",
+  "priority": "high",
+  "description": "Overdue strategic follow-up. Draft only; do not assume outbound send exists."
+}

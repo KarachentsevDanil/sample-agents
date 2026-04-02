@@ -1,0 +1,12 @@
+{
+  "number": "INV-001-01",
+  "account_id": "acct_001",
+  "issued_on": "2026-04-25",
+  "lines": [
+    {
+      "name": "Platform subscription",
+      "amount": 1710
+    }
+  ],
+  "total": 1710
+}

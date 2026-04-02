@@ -1,0 +1,15 @@
+{
+  "id": "acct_010",
+  "name": "Northstar Forecasting",
+  "legal_name": "Northstar Forecasting B.V.",
+  "industry": "professional_services",
+  "region": "Benelux",
+  "country": "Netherlands",
+  "tier": "growth",
+  "status": "active",
+  "primary_contact_id": "cont_010",
+  "account_manager": "John Novak",
+  "last_contacted_on": "2026-08-09",
+  "next_follow_up_on": "2026-09-26",
+  "notes": "Procured from a small forecasting workflow pilot after a regional consulting contact introduced John to their delivery lead. The commercial history is intentionally unremarkable because this account mainly exists to preserve one duplicate-contact-name ambiguity across otherwise plausible account data. Sibling account seeded only to preserve duplicate-contact ambiguity. Related note file: 01_notes/northstar-forecasting.md"
+}

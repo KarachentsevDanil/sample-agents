@@ -1,0 +1,15 @@
+{
+  "id": "opp_009",
+  "account_id": "acct_009",
+  "name": "Aperture AI Labs expansion",
+  "stage": "proposal",
+  "amount_eur": 83944,
+  "owner": "John Novak",
+  "probability_percent": 50,
+  "last_activity_on": "2026-07-13",
+  "target_close_on": "2026-12-09",
+  "next_action": "request access to sample dataset",
+  "risk_flags": [
+    "procurement_delay"
+  ]
+}

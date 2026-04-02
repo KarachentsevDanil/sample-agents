@@ -1,0 +1,7 @@
+{
+  "subject": "Invoice sent",
+  "to": "priya@example.com",
+  "body": "Sent the invoice this morning. Thanks.",
+  "attachments": [],
+  "sent": true
+}

@@ -1,0 +1,18 @@
+{
+  "id": "acct_001",
+  "name": "Nordlicht Health",
+  "legal_name": "Nordlicht Health GmbH",
+  "industry": "healthcare",
+  "region": "DACH",
+  "country": "Germany",
+  "tier": "strategic",
+  "status": "active",
+  "primary_contact_id": "cont_001",
+  "account_manager": "John Novak",
+  "last_contacted_on": "2026-05-15",
+  "next_follow_up_on": "2026-06-19",
+  "notes": "Early design partner with slow procurement.",
+  "compliance_flags": [
+    "dpa_required"
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "id": "opp_008",
+  "account_id": "acct_008",
+  "name": "Helios Tax Group expansion",
+  "stage": "qualified",
+  "amount_eur": 79939,
+  "owner": "John Novak",
+  "probability_percent": 30,
+  "last_activity_on": "2026-06-05",
+  "target_close_on": "2026-08-04",
+  "next_action": "request access to sample dataset",
+  "risk_flags": [
+    "timeline_slipping"
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "id": "acct_006",
+  "name": "Silverline Retail",
+  "legal_name": "Silverline Retail GmbH",
+  "industry": "retail",
+  "region": "DACH",
+  "country": "Germany",
+  "tier": "core",
+  "status": "active",
+  "primary_contact_id": "cont_006",
+  "account_manager": "John Novak",
+  "last_contacted_on": "2026-02-04",
+  "next_follow_up_on": "2026-03-19",
+  "notes": "Good logo deal, weak internal sponsorship."
+}

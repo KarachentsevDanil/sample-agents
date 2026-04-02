@@ -1,0 +1,9 @@
+{
+  "id": "cont_002",
+  "account_id": "acct_002",
+  "full_name": "Alex Meyer",
+  "role": "Operations Director",
+  "email": "alex.meyer@acme-robotics.example.com",
+  "preferred_tone": "brief",
+  "last_seen_on": "2026-06-11"
+}

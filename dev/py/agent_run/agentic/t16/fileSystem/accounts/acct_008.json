@@ -1,0 +1,18 @@
+{
+  "id": "acct_008",
+  "name": "Helios Tax Group",
+  "legal_name": "Helios Tax Group GmbH",
+  "industry": "professional_services",
+  "region": "DACH",
+  "country": "Germany",
+  "tier": "growth",
+  "status": "active",
+  "primary_contact_id": "cont_008",
+  "account_manager": "John Novak",
+  "last_contacted_on": "2026-01-02",
+  "next_follow_up_on": "2026-01-26",
+  "notes": "Potential referral source for tax-advisor scenarios later.",
+  "compliance_flags": [
+    "privacy_sensitive"
+  ]
+}

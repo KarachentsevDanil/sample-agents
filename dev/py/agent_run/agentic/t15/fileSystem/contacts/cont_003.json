@@ -1,0 +1,9 @@
+{
+  "id": "cont_003",
+  "account_id": "acct_003",
+  "full_name": "Alex Meyer",
+  "role": "Operations Director",
+  "email": "alex.meyer@acme-logistics.example.com",
+  "preferred_tone": "brief",
+  "last_seen_on": "2026-03-02"
+}

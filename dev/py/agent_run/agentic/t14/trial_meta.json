@@ -1,0 +1,6 @@
+{
+  "task_id": "t14",
+  "trial_id": "vm-02knzvh8p4vph7q",
+  "instruction": "Send email to Blue Harbor Bank with subject \"Security review follow-up\" and body \"Checking in on the open security review. Happy to answer questions and align on next steps.\"",
+  "benchmark_id": "bitgn/pac1-dev"
+}

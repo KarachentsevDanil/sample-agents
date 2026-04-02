@@ -1,0 +1,15 @@
+{
+  "id": "acct_007",
+  "name": "CanalPort Shipping",
+  "legal_name": "CanalPort Shipping B.V.",
+  "industry": "logistics",
+  "region": "Benelux",
+  "country": "Netherlands",
+  "tier": "core",
+  "status": "active",
+  "primary_contact_id": "cont_007",
+  "account_manager": "John Novak",
+  "last_contacted_on": "2026-07-31",
+  "next_follow_up_on": "2026-08-28",
+  "notes": "Strong ops pain, medium urgency."
+}

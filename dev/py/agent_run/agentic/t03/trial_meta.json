@@ -1,0 +1,6 @@
+{
+  "task_id": "t03",
+  "trial_id": "vm-02knztjpcr4grw4",
+  "instruction": "Take 00_inbox/2026-03-23__hn-walmart-chatgpt-checkout.md from inbox, capture it into into 'influental' folder, distill, and delete the inbox file when done. Keep the diff focused.",
+  "benchmark_id": "bitgn/pac1-dev"
+}

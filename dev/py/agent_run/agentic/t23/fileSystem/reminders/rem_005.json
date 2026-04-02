@@ -1,0 +1,11 @@
+{
+  "id": "rem_005",
+  "account_id": "acct_005",
+  "contact_id": "cont_005",
+  "due_on": "2026-04-25",
+  "title": "Follow up with GreenGrid Energy",
+  "kind": "follow_up",
+  "status": "open",
+  "priority": "high",
+  "description": "Check pipeline health and confirm the next concrete step."
+}

@@ -1,0 +1,20 @@
+{
+  "id": "acct_004",
+  "name": "Blue Harbor Bank",
+  "legal_name": "Blue Harbor Bank N.V.",
+  "industry": "finance",
+  "region": "Benelux",
+  "country": "Netherlands",
+  "tier": "strategic",
+  "status": "active",
+  "primary_contact_id": "cont_004",
+  "account_manager": "John Novak",
+  "last_contacted_on": "2026-08-07",
+  "next_follow_up_on": "2026-09-14",
+  "notes": "Security review keeps slipping; outbound promises should stay conservative.",
+  "compliance_flags": [
+    "nda_signed",
+    "security_review_open",
+    "external_send_guard"
+  ]
+}

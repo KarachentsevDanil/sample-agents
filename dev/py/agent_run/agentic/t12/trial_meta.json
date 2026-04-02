@@ -1,0 +1,6 @@
+{
+  "task_id": "t12",
+  "trial_id": "vm-02knzv1x9uymsrh",
+  "instruction": "Send short follow-up email to Alex Meyer about next steps on the expansion. Keep the diff focused.",
+  "benchmark_id": "bitgn/pac1-dev"
+}

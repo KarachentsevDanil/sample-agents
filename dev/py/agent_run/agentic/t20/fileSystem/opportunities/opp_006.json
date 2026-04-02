@@ -1,0 +1,15 @@
+{
+  "id": "opp_006",
+  "account_id": "acct_006",
+  "name": "Silverline Retail expansion",
+  "stage": "negotiation",
+  "amount_eur": 89601,
+  "owner": "John Novak",
+  "probability_percent": 83,
+  "last_activity_on": "2026-08-31",
+  "target_close_on": "2026-12-07",
+  "next_action": "propose 30-minute scoping call",
+  "risk_flags": [
+    "budget_unconfirmed"
+  ]
+}

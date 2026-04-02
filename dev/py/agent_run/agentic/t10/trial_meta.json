@@ -1,0 +1,6 @@
+{
+  "task_id": "t10",
+  "trial_id": "vm-02knzufjnwkf8s9",
+  "instruction": "Create invoice SR-13 with 2 lines: 'OpenAI Subscription' - 20, 'Claude Subscription' - 20",
+  "benchmark_id": "bitgn/pac1-dev"
+}

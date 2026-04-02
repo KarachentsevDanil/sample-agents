@@ -1,0 +1,15 @@
+{
+  "id": "acct_003",
+  "name": "Acme Logistics",
+  "legal_name": "Acme Logistics B.V.",
+  "industry": "logistics",
+  "region": "Benelux",
+  "country": "Netherlands",
+  "tier": "growth",
+  "status": "active",
+  "primary_contact_id": "cont_003",
+  "account_manager": "John Novak",
+  "last_contacted_on": "2026-08-21",
+  "next_follow_up_on": "2026-09-13",
+  "notes": "Procured separately from Acme Robotics after a Benelux warehouse director heard about the earlier Acme pilot and requested a similar review for exception handling in cross-dock operations. The first contract was modest and framed as an operations experiment rather than a broad platform commitment. Second Acme account for clarification tasks, with deliberately similar naming but unrelated buying committee history. Related note file: 01_notes/acme-logistics.md"
+}

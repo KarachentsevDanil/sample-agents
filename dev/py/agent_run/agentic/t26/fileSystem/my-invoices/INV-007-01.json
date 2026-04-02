@@ -1,0 +1,16 @@
+{
+  "number": "INV-007-01",
+  "account_id": "acct_007",
+  "issued_on": "2026-05-13",
+  "lines": [
+    {
+      "name": "Platform subscription",
+      "amount": 1753
+    },
+    {
+      "name": "Implementation workshop",
+      "amount": 819
+    }
+  ],
+  "total": 2572
+}

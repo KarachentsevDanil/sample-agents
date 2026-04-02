@@ -1,0 +1,19 @@
+{
+  "id": "acct_009",
+  "name": "Aperture AI Labs",
+  "legal_name": "Aperture AI Labs GmbH",
+  "industry": "software",
+  "region": "DACH",
+  "country": "Germany",
+  "tier": "growth",
+  "status": "active",
+  "primary_contact_id": "cont_009",
+  "account_manager": "John Novak",
+  "last_contacted_on": "2026-02-13",
+  "next_follow_up_on": "2026-03-20",
+  "notes": "AI insights add-on subscriber with an open security review workflow.",
+  "compliance_flags": [
+    "ai_insights_subscriber",
+    "security_review_open"
+  ]
+}

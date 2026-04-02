@@ -1,0 +1,15 @@
+{
+  "id": "opp_003",
+  "account_id": "acct_003",
+  "name": "Acme Logistics expansion",
+  "stage": "proposal",
+  "amount_eur": 103773,
+  "owner": "John Novak",
+  "probability_percent": 46,
+  "last_activity_on": "2026-09-19",
+  "target_close_on": "2026-12-12",
+  "next_action": "confirm budget window",
+  "risk_flags": [
+    "procurement_delay"
+  ]
+}

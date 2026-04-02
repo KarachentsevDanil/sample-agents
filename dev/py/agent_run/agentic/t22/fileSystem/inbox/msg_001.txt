@@ -1,0 +1,9 @@
+From: Benjamin Zimmermann <benjamin.zimmermann@acme-robotics.example.com.ai>
+Subject: Could you resend the last invoice?
+
+Hi,
+
+Could you please resend the latest invoice for Acme Robotics? I can't find it on my side.
+
+Thanks,
+Benjamin Zimmermann

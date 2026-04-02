@@ -1,0 +1,15 @@
+{
+  "id": "acct_002",
+  "name": "Acme Robotics",
+  "legal_name": "Acme Robotics GmbH",
+  "industry": "manufacturing",
+  "region": "DACH",
+  "country": "Germany",
+  "tier": "growth",
+  "status": "active",
+  "primary_contact_id": "cont_002",
+  "account_manager": "John Novak",
+  "last_contacted_on": "2026-09-04",
+  "next_follow_up_on": "2026-09-28",
+  "notes": "Procured through a warm intro from an existing systems integrator who had been trying to clean up handoff issues between robotics QA and plant operations. John ran a short workflow audit, sent back a concrete loss analysis, and that was enough to get a small initial budget approved. One of two Acme accounts; the name ambiguity is intentional and should stay visible to agents. Related note file: 01_notes/acme-robotics.md"
+}

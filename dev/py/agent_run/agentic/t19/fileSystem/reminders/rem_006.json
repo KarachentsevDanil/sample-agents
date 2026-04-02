@@ -1,0 +1,11 @@
+{
+  "id": "rem_006",
+  "account_id": "acct_006",
+  "contact_id": "cont_006",
+  "due_on": "2026-09-06",
+  "title": "Follow up with Silverline Retail",
+  "kind": "follow_up",
+  "status": "open",
+  "priority": "low",
+  "description": "Check pipeline health and confirm the next concrete step."
+}

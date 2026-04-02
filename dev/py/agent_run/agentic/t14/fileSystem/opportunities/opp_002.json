@@ -1,0 +1,15 @@
+{
+  "id": "opp_002",
+  "account_id": "acct_002",
+  "name": "Acme Robotics expansion",
+  "stage": "negotiation",
+  "amount_eur": 70594,
+  "owner": "John Novak",
+  "probability_percent": 77,
+  "last_activity_on": "2026-11-21",
+  "target_close_on": "2027-01-06",
+  "next_action": "propose 30-minute scoping call",
+  "risk_flags": [
+    "multi_stakeholder_buy_in"
+  ]
+}

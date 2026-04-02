@@ -1,0 +1,15 @@
+{
+  "id": "opp_001",
+  "account_id": "acct_001",
+  "name": "Nordlicht Health expansion",
+  "stage": "proposal",
+  "amount_eur": 41164,
+  "owner": "John Novak",
+  "probability_percent": 63,
+  "last_activity_on": "2026-06-02",
+  "target_close_on": "2026-08-19",
+  "next_action": "prepare short recap from discovery call",
+  "risk_flags": [
+    "multi_stakeholder_buy_in"
+  ]
+}

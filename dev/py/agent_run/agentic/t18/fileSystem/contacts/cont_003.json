@@ -1,0 +1,9 @@
+{
+  "id": "cont_003",
+  "account_id": "acct_003",
+  "full_name": "Sara van Dijk",
+  "role": "QA Lead",
+  "email": "sara.van.dijk@acme-logistics.example.com",
+  "preferred_tone": "brief",
+  "last_seen_on": "2026-02-01"
+}

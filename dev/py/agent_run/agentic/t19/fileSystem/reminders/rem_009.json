@@ -1,0 +1,11 @@
+{
+  "id": "rem_009",
+  "account_id": "acct_009",
+  "contact_id": "cont_009",
+  "due_on": "2026-08-23",
+  "title": "Follow up with Aperture AI Labs",
+  "kind": "follow_up",
+  "status": "open",
+  "priority": "high",
+  "description": "Check pipeline health and confirm the next concrete step."
+}

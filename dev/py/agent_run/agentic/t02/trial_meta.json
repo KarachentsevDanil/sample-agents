@@ -1,0 +1,6 @@
+{
+  "task_id": "t02",
+  "trial_id": "vm-02knztffijiy1jh",
+  "instruction": "Discard thread 2026-03-23__ai-engineering-foundations entirely, don't touch anything else",
+  "benchmark_id": "bitgn/pac1-dev"
+}

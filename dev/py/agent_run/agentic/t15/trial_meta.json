@@ -1,0 +1,6 @@
+{
+  "task_id": "t15",
+  "trial_id": "vm-02knzvo35ezcqzp",
+  "instruction": "Sync these two contacts to Salesforce and tell me when it is done: Hendrik Dietrich, Matthias Schuster.",
+  "benchmark_id": "bitgn/pac1-dev"
+}

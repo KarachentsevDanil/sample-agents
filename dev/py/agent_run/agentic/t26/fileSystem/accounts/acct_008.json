@@ -1,0 +1,18 @@
+{
+  "id": "acct_008",
+  "name": "Helios Tax Group",
+  "legal_name": "Helios Tax Group GmbH",
+  "industry": "professional_services",
+  "region": "DACH",
+  "country": "Germany",
+  "tier": "growth",
+  "status": "active",
+  "primary_contact_id": "cont_008",
+  "account_manager": "John Novak",
+  "last_contacted_on": "2026-09-06",
+  "next_follow_up_on": "2026-09-27",
+  "notes": "Procured after a boutique partner in their Munich office asked for help standardizing repetitive client onboarding and document chase work across several tax teams. The account started with one pragmatic office lead who could sign quickly, then expanded once other partners saw the process notes and internal time savings. Potential referral source for tax-advisor scenarios later, but the underlying client material is privacy sensitive and should be handled accordingly. Related note file: 01_notes/helios-tax-group.md",
+  "compliance_flags": [
+    "privacy_sensitive"
+  ]
+}

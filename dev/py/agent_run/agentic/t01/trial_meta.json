@@ -1,0 +1,6 @@
+{
+  "task_id": "t01",
+  "trial_id": "vm-02knzt6nj4j6r2u",
+  "instruction": "Let's start over. Remove all captured cards and threads. Do not touch anything else",
+  "benchmark_id": "bitgn/pac1-dev"
+}

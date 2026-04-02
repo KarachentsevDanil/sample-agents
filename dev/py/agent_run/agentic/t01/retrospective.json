@@ -1,0 +1,17 @@
+{
+  "task_id": "t01",
+  "trial_id": "vm-02kmu5fqdzdr3ro",
+  "outcome": "OUTCOME_OK",
+  "score": 1.0,
+  "failure_category": null,
+  "what_worked": [
+    "Trusted rule reading identified the exact deletion boundary",
+    "Templates were preserved as scaffolding rather than deleted as content",
+    "Post-delete tree verification confirmed 01_capture remained intact"
+  ],
+  "what_failed": [],
+  "tool_gaps": [],
+  "spec_updates": [
+    "Capability and scope decisions should happen only after trusted rule loading and post-action verification"
+  ]
+}

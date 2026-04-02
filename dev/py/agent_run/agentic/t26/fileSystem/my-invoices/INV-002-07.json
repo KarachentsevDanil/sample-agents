@@ -1,0 +1,16 @@
+{
+  "number": "INV-002-07",
+  "account_id": "acct_002",
+  "issued_on": "2026-08-07",
+  "lines": [
+    {
+      "name": "Platform subscription",
+      "amount": 2120
+    },
+    {
+      "name": "Support retainer",
+      "amount": 291
+    }
+  ],
+  "total": 2411
+}

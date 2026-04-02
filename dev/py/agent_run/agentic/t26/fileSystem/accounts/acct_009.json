@@ -1,0 +1,19 @@
+{
+  "id": "acct_009",
+  "name": "Aperture AI Labs",
+  "legal_name": "Aperture AI Labs GmbH",
+  "industry": "software",
+  "region": "DACH",
+  "country": "Germany",
+  "tier": "growth",
+  "status": "active",
+  "primary_contact_id": "cont_009",
+  "account_manager": "John Novak",
+  "last_contacted_on": "2026-08-19",
+  "next_follow_up_on": "2026-09-26",
+  "notes": "Procured when their product analytics lead asked for the AI insights add-on after a prior core workflow rollout had already landed well with operations. The upsell closed quickly because the buyer already trusted the team, but their security group still opened a separate review for the new data flow. AI insights add-on subscriber with an open security review workflow. Related note file: 01_notes/aperture-ai-labs.md",
+  "compliance_flags": [
+    "ai_insights_subscriber",
+    "security_review_open"
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "id": "opp_005",
+  "account_id": "acct_005",
+  "name": "GreenGrid Energy expansion",
+  "stage": "proposal",
+  "amount_eur": 55881,
+  "owner": "John Novak",
+  "probability_percent": 58,
+  "last_activity_on": "2026-05-11",
+  "target_close_on": "2026-08-04",
+  "next_action": "send follow-up draft with next-step options"
+}

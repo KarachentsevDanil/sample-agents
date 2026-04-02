@@ -1,0 +1,9 @@
+From: Luuk Vermeulen <luuk.vermeulen@blue-harbor-bank.example.com>
+Subject: Could you resend the last invoice?
+
+Hi,
+
+Could you please resend the latest invoice for Blue Harbor Bank? I can't find it on my side.
+
+Thanks,
+Luuk Vermeulen

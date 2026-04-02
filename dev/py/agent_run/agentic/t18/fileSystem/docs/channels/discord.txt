@@ -1,0 +1,13 @@
+MeridianOps - valid
+SummitOperations - blacklist
+SterlingAdvisors - blacklist
+IroncladCapital- blacklist
+BluePeakFinance- blacklist
+LedgerPoint- blacklist
+OaklineConsulting- blacklist
+CrestfieldGroup- blacklist
+HarborStrategy- blacklist
+ClearpathAdvisory- blacklist
+VanguardDesk- blacklist
+AlturaPartners- blacklist
+SynapseSystems - admin

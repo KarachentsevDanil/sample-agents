@@ -1,0 +1,11 @@
+{
+  "id": "rem_010",
+  "account_id": "acct_010",
+  "contact_id": "cont_010",
+  "due_on": "2026-09-26",
+  "title": "Follow up with Northstar Forecasting",
+  "kind": "follow_up",
+  "status": "open",
+  "priority": "low",
+  "description": "Check pipeline health and confirm the next concrete step."
+}

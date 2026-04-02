@@ -1,0 +1,6 @@
+{
+  "task_id": "t17",
+  "trial_id": "vm-02kremaqn6y9k2f",
+  "instruction": "Email reminder to Sauer Sandra at Acme Robotics with subject \"Quick follow-up\" and about \"Just a reminder from my side in case this slipped in the queue.\".",
+  "benchmark_id": "bitgn/pac1-dev"
+}

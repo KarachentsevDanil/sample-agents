@@ -1,0 +1,6 @@
+{
+  "task_id": "t26",
+  "trial_id": "vm-02kz9br67383i9s",
+  "instruction": "email to aperture ai labs with subject \"Security review follow-up\" and body \"Checking in on the open security review. Happy to answer questions and align on next steps.\"",
+  "benchmark_id": "bitgn/pac1-dev"
+}

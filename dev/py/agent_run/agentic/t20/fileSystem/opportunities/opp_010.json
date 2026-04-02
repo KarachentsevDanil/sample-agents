@@ -1,0 +1,15 @@
+{
+  "id": "opp_010",
+  "account_id": "acct_010",
+  "name": "Northstar Forecasting expansion",
+  "stage": "lead",
+  "amount_eur": 26864,
+  "owner": "John Novak",
+  "probability_percent": 13,
+  "last_activity_on": "2026-09-03",
+  "target_close_on": "2026-12-03",
+  "next_action": "request access to sample dataset",
+  "risk_flags": [
+    "procurement_delay"
+  ]
+}

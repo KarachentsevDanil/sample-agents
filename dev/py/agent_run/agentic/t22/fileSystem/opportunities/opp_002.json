@@ -1,0 +1,12 @@
+{
+  "id": "opp_002",
+  "account_id": "acct_002",
+  "name": "Acme Robotics expansion",
+  "stage": "negotiation",
+  "amount_eur": 45346,
+  "owner": "John Novak",
+  "probability_percent": 71,
+  "last_activity_on": "2026-06-20",
+  "target_close_on": "2026-07-22",
+  "next_action": "request access to sample dataset"
+}

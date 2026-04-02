@@ -1,0 +1,16 @@
+{
+  "id": "opp_004",
+  "account_id": "acct_004",
+  "name": "Blue Harbor Bank expansion",
+  "stage": "negotiation",
+  "amount_eur": 71794,
+  "owner": "John Novak",
+  "probability_percent": 70,
+  "last_activity_on": "2026-04-03",
+  "target_close_on": "2026-08-11",
+  "next_action": "confirm budget window",
+  "risk_flags": [
+    "security_review_open",
+    "legal_waiting_on_customer"
+  ]
+}

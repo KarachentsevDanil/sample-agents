@@ -1,0 +1,16 @@
+{
+  "task_id": "t11",
+  "trial_id": "vm-02knze1zzk6tmrd",
+  "outcome": "OUTCOME_OK",
+  "score": 1.0,
+  "failure_category": null,
+  "what_worked": [
+    "outbox/README.MD immediately defined the exact write contract (numbered file + seq bump)",
+    "seq.json provided unambiguous next ID (85007)",
+    "Task provided concrete to/subject/body — no contact lookup needed",
+    "Two-write atomic pattern (email file then seq bump) matched invariants exactly"
+  ],
+  "what_failed": [],
+  "tool_gaps": [],
+  "spec_updates": []
+}

@@ -1,0 +1,20 @@
+{
+  "task_id": "t13",
+  "trial_id": "vm-02knyw1fqmn3ogl",
+  "outcome": "OUTCOME_OK",
+  "score": 1.0,
+  "failure_category": null,
+  "what_worked": [
+    "VM context time (2026-04-16) correctly identified as reference for 'two weeks from now' = 2026-04-30",
+    "Full-text search for 'Nordlicht' immediately located both acct_001.json and rem_001.json",
+    "AGENTS.MD rule explicitly stated: update both reminder and owning account when rescheduling",
+    "Both accounts/README.MD and reminders/README.MD confirmed date field names (next_follow_up_on and due_on)",
+    "Diff was kept focused: only date fields changed, all other fields preserved",
+    "Post-write verification confirmed both files updated correctly before submission"
+  ],
+  "what_failed": [],
+  "tool_gaps": [],
+  "spec_updates": [
+    "No 90_memory/soul.md exists in this VM variant - that directory is only present in some task configurations. The runbook step to read it should be conditional."
+  ]
+}

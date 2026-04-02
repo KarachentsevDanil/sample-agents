@@ -1,0 +1,11 @@
+{
+  "id": "rem_004",
+  "account_id": "acct_004",
+  "contact_id": "cont_004",
+  "due_on": "2026-01-17",
+  "title": "Follow up with Blue Harbor Bank",
+  "kind": "follow_up",
+  "status": "open",
+  "priority": "high",
+  "description": "Check pipeline health and confirm the next concrete step."
+}

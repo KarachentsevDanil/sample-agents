@@ -1,0 +1,15 @@
+{
+  "id": "opp_007",
+  "account_id": "acct_007",
+  "name": "CanalPort Shipping expansion",
+  "stage": "negotiation",
+  "amount_eur": 90590,
+  "owner": "John Novak",
+  "probability_percent": 74,
+  "last_activity_on": "2026-05-31",
+  "target_close_on": "2026-08-17",
+  "next_action": "send follow-up draft with next-step options",
+  "risk_flags": [
+    "procurement_delay"
+  ]
+}

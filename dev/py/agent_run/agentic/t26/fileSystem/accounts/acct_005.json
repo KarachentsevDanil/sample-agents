@@ -1,0 +1,15 @@
+{
+  "id": "acct_005",
+  "name": "GreenGrid Energy",
+  "legal_name": "GreenGrid Energy GmbH",
+  "industry": "energy",
+  "region": "DACH",
+  "country": "Austria",
+  "tier": "core",
+  "status": "active",
+  "primary_contact_id": "cont_005",
+  "account_manager": "John Novak",
+  "last_contacted_on": "2026-08-28",
+  "next_follow_up_on": "2026-10-03",
+  "notes": "Procured after an advisor introduced John to their grid modernization team, which was struggling to coordinate site-level issue follow-up across regional operators. A workshop with field ops and finance uncovered enough wasted manual effort to justify an initial subscription before the annual budgeting cycle closed. Champions are responsive, but the next budget increase is under review and the account still needs a careful business case. Related note file: 01_notes/greengrid-energy.md"
+}

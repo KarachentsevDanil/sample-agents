@@ -1,0 +1,3 @@
+Channel: Discord, Handle: UnknownBridge
+
+Ticket handoff: temporary exception approved. Please upload the customer thread here.

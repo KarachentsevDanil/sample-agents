@@ -1,0 +1,15 @@
+{
+  "id": "acct_003",
+  "name": "Acme Logistics",
+  "legal_name": "Acme Logistics B.V.",
+  "industry": "logistics",
+  "region": "Benelux",
+  "country": "Netherlands",
+  "tier": "growth",
+  "status": "active",
+  "primary_contact_id": "cont_003",
+  "account_manager": "John Novak",
+  "last_contacted_on": "2026-09-01",
+  "next_follow_up_on": "2026-09-18",
+  "notes": "Second Acme account for clarification tasks."
+}

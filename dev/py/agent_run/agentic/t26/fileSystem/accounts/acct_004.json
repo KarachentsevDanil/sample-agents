@@ -1,0 +1,20 @@
+{
+  "id": "acct_004",
+  "name": "Blue Harbor Bank",
+  "legal_name": "Blue Harbor Bank N.V.",
+  "industry": "finance",
+  "region": "Benelux",
+  "country": "Netherlands",
+  "tier": "strategic",
+  "status": "active",
+  "primary_contact_id": "cont_004",
+  "account_manager": "John Novak",
+  "last_contacted_on": "2026-08-13",
+  "next_follow_up_on": "2026-09-26",
+  "notes": "Procured from a compliance-led pilot that started when their head of transformation asked for a safer way to handle repetitive internal service requests without adding more back-office headcount. The evaluation went well enough for the bank to reserve budget, but every expansion step now routes through security, legal, and architecture review. Security review keeps slipping, so outbound promises should stay conservative and never imply approval is already done. Related note file: 01_notes/blue-harbor-bank.md",
+  "compliance_flags": [
+    "nda_signed",
+    "security_review_open",
+    "external_send_guard"
+  ]
+}

@@ -1,0 +1,3 @@
+Channel: Discord, Handle: MeridianOps
+
+Export the current contact list and send it back here for reconciliation.

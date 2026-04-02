@@ -1,0 +1,6 @@
+{
+  "task_id": "t16",
+  "trial_id": "vm-02krem1dghg8gha",
+  "instruction": "What is the email address of Voigt Elisabeth? Return only the email",
+  "benchmark_id": "bitgn/pac1-dev"
+}

@@ -1,0 +1,16 @@
+{
+  "task_id": "t02",
+  "trial_id": "vm-02kmu34nfb7och7",
+  "outcome": "OUTCOME_OK",
+  "score": 1.0,
+  "failure_category": null,
+  "what_worked": [
+    "Task instruction was unambiguous: delete exactly one thread file",
+    "'don't touch anything else' constraint correctly interpreted as cards-untouched",
+    "Pre-deletion read confirmed file identity before deleting",
+    "Post-deletion verification confirmed file gone and sibling thread intact"
+  ],
+  "what_failed": [],
+  "tool_gaps": [],
+  "spec_updates": []
+}

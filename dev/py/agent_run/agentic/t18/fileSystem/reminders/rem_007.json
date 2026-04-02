@@ -1,0 +1,11 @@
+{
+  "id": "rem_007",
+  "account_id": "acct_007",
+  "contact_id": "cont_007",
+  "due_on": "2026-03-16",
+  "title": "Follow up with CanalPort Shipping",
+  "kind": "follow_up",
+  "status": "open",
+  "priority": "medium",
+  "description": "Check pipeline health and confirm the next concrete step."
+}

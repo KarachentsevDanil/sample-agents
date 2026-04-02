@@ -1,0 +1,15 @@
+{
+  "id": "acct_002",
+  "name": "Acme Robotics",
+  "legal_name": "Acme Robotics GmbH",
+  "industry": "manufacturing",
+  "region": "DACH",
+  "country": "Germany",
+  "tier": "growth",
+  "status": "active",
+  "primary_contact_id": "cont_002",
+  "account_manager": "John Novak",
+  "last_contacted_on": "2026-10-27",
+  "next_follow_up_on": "2026-12-05",
+  "notes": "One of two Acme accounts. Name ambiguity is intentional."
+}

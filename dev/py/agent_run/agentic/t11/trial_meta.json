@@ -1,0 +1,6 @@
+{
+  "task_id": "t11",
+  "trial_id": "vm-02knzumr0hiy46b",
+  "instruction": "Write a brief email to alex@example.com with subject \"Quick update\" and body 'Subj'",
+  "benchmark_id": "bitgn/pac1-dev"
+}

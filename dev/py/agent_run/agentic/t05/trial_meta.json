@@ -1,0 +1,6 @@
+{
+  "task_id": "t05",
+  "trial_id": "vm-02knztrlgcmral1",
+  "instruction": "Create a calendar invite with Priya about weekly planning sync for tomorrow morning.",
+  "benchmark_id": "bitgn/pac1-dev"
+}

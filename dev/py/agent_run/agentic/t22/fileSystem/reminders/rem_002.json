@@ -1,0 +1,11 @@
+{
+  "id": "rem_002",
+  "account_id": "acct_002",
+  "contact_id": "cont_002",
+  "due_on": "2026-06-15",
+  "title": "Follow up with Acme Robotics",
+  "kind": "follow_up",
+  "status": "open",
+  "priority": "high",
+  "description": "Check pipeline health and confirm the next concrete step."
+}

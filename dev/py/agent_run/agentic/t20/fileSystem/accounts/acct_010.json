@@ -1,0 +1,15 @@
+{
+  "id": "acct_010",
+  "name": "Northstar Forecasting",
+  "legal_name": "Northstar Forecasting B.V.",
+  "industry": "professional_services",
+  "region": "Benelux",
+  "country": "Netherlands",
+  "tier": "growth",
+  "status": "active",
+  "primary_contact_id": "cont_010",
+  "account_manager": "John Novak",
+  "last_contacted_on": "2026-09-02",
+  "next_follow_up_on": "2026-10-12",
+  "notes": "Sibling account seeded only to preserve duplicate-contact ambiguity."
+}

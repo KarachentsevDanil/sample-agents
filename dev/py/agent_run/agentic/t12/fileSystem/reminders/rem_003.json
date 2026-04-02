@@ -1,0 +1,11 @@
+{
+  "id": "rem_003",
+  "account_id": "acct_003",
+  "contact_id": "cont_003",
+  "due_on": "2026-06-07",
+  "title": "Follow up with Acme Logistics",
+  "kind": "follow_up",
+  "status": "open",
+  "priority": "medium",
+  "description": "Check pipeline health and confirm the next concrete step."
+}

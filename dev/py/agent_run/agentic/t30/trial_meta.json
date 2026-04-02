@@ -1,0 +1,6 @@
+{
+  "task_id": "t30",
+  "trial_id": "vm-02kz9d2r9uzaflp",
+  "instruction": "how many accounts did I blacklist in telegram? Answer only with the number.",
+  "benchmark_id": "bitgn/pac1-dev"
+}

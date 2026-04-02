@@ -1,0 +1,15 @@
+{
+  "id": "acct_005",
+  "name": "GreenGrid Energy",
+  "legal_name": "GreenGrid Energy GmbH",
+  "industry": "energy",
+  "region": "DACH",
+  "country": "Austria",
+  "tier": "core",
+  "status": "active",
+  "primary_contact_id": "cont_005",
+  "account_manager": "John Novak",
+  "last_contacted_on": "2026-12-04",
+  "next_follow_up_on": "2026-12-14",
+  "notes": "Champions are responsive but budget is under review."
+}
